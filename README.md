@@ -1,1 +1,1 @@
-# egg_cvd_composite
+# Egg composite CVD study
