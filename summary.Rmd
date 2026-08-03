@@ -1,0 +1,230 @@
+---
+title: "Egg composite CVD study"
+output: github_document
+always_allow_html: true
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Required packages
+pacs <- c("tidyverse", "tableone", "survival", "mice")
+sapply(pacs, require, character.only = TRUE)
+
+# Read the list of imputed data -------------------------------------------
+
+imputed_data_list <- readRDS("./Data/imputed_data_list.rds")
+
+# First imputed data
+mi1 <- imputed_data_list[[1]]
+
+```
+
+## Aim
+
+* Examine associations between egg and meat intake and incident cardiovascular disease (CVD)
+* Examine whether egg intake modifies the association between meat intake and CVD
+  * i.e., whether egg and meat intake interact in their effect on CVD incidence
+
+## Outcome
+
+* Any of the following incident CVD cases:
+  * Ischemic heart disease
+  * Stroke/transient ischemic attack
+  * Acute myocardial infarction
+  * Congestive heart failure (in 27 chronic conditions) or heart failure and non-ischemic heart disease (in 30 chronic conditions)
+  * Atrial fibrillation
+* For disease definition, see [Chronic Conditions Data Warehouse](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
+  * Note that the definitions may differ between 27 chronic conditions (available in 2008-2020 data) and 30 chronic conditions (2021-2022)
+
+## Exposure of interest
+
+* Dietary intake, measured via the AHS baseline questionnaire
+
+* Egg intake frequency
+  * Categorized into four groups based on frequency of intake
+
+* Meat intake, gram/day
+  * Energy-adjusted
+  
+* Multiplicative interaction terms between egg intake category and meat intake (g/d) will be assessed in Cox proportional hazards models
+
+## Datasets
+
+* Medicare data
+  * For details regarding Medicare data, see [AHS-2 Medicare Linkage](https://github.com/keijioda/ahs_medicare_linkage/blob/main/summary.md) repository.
+  
+  * Master Beneficiary Summary File (MBSF), 2008-2022
+    * Contains beneficiary characteristics and enrollment information
+    
+  * Chronic Conditions file (CC), 2008-2022
+    * Contains the first occurrence date of [27 (or 30) specific chronic conditions](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
+    * Used to identify prevalent/incident cases of CVD and
+    * to identify comorbidities, based on ICD-9 and ICD-10 codes
+    
+  * Both files include n = 46,897 unique subjects across years, after excluding 
+    * Gender/DOB mismatch with AHS-2 data
+    * Dupulicate beneficiary IDs and SSNs
+
+* AHS-2 baseline data: n = 96,144
+  
+* After merging Medicare and AHS-2 data, there were n = 43,467 subjects
+  * Participants who opted out from the study or those who live outside the U.S were already excluded at this point
+
+## Inclusion/exclusion criteria
+
+* Medicare beneficiaries who did not reach the age of 65 between 2008 and 2022 (e.g., younger beneficiaries with disabilities or end-stage renal disease) were excluded (n = 1238), resulting n = 42,229.
+
+* n = 106 subjects with extreme BMI (<16 or >60), according to AHS questionnaire, were excluded, resulting n = 42,123.
+
+* Unverified dates of deaths
+  * Medicare data include a variable (`VALID_DEATH_DT_SW`) indicating whether a beneficiary's day of death has been verified by the Social Security Administration or the Railroad Retirement Board.
+  * There were 23 unverified death dates. Excluding these resulted in n = 42,100.
+
+* Prevalent CVD cases
+  * At this point of analysis, prevalent cases were defined as those who were diagnosed with any of the five CVD conditions prior to their AHS-2 enrollment
+  * There were 3,542 such prevalent cases. Excluding these prevalence resulted in n = 38,558
+  
+## Incident CVD cases
+
+* Among n = 38,558 subjects, there were 12,890 incident CVD cases (33.4%)
+  * Among these cases, there were 223 incident cases within 6 months after AHS-2 enrollment
+  * Similarly, numbers of incident cases within 12, 18, 24 36, and 48 months are shown below:
+
+```{r incidence_after_enrollment, echo = FALSE}
+# How many were diagnosed within 6, 12,...months after enrollment?
+c(6, 12, 18, 24, 36, 48) %>% 
+  map_df(\(x) 
+         tibble(
+           `Months after enrollment` = x,
+           `N incident CVD cases`    = filter(mi1, CVD_EVER <= qreturndate %m+% months(x)) %>% nrow()
+           )
+         ) %>% 
+  knitr::kable()
+
+```
+
+* For each of the five CVD conditions, the number of incident cases is shown below:
+
+```{r five_cvd_cc, echo = FALSE}
+
+cvd_vars <- c("ISCHEMICHEART_EVER", "STROKE_TIA_EVER", "AMI_EVER", "CHF_EVER", "ATRIAL_FIB_EVER")
+
+# Number of incident CVD cases
+cvd_df <- mi1 %>% 
+  select(all_of(cvd_vars)) %>% 
+  mutate_all(ymd) %>% 
+  mutate_all(\(x) ifelse(is.na(x), "No", "Yes"))
+
+CreateTableOne(cvd_vars, data = cvd_df) %>% kableone()
+
+```
+
+* Many of these CVD cases have more than one of the 5 conditions. See below for the frequency table of CVD conditions:
+
+```{r n_cvd_cc, echo = FALSE}
+
+# Number of CVDs per subject
+mi1 %>% 
+  select(all_of(cvd_vars)) %>% 
+  mutate_all(ymd) %>% 
+  mutate_all(\(x) ifelse(is.na(x), 0, 1)) %>% 
+  mutate(`Number of CVD conditions` = rowSums(across(all_of(cvd_vars)))) %>% 
+  count(`Number of CVD conditions`) %>%
+  mutate(Percent = round(n / sum(n) * 100, 2)) %>%
+  knitr::kable()
+
+```
+
+## Descriptive tables
+
+### Person-years of follow-up
+
+```{r desc_person_years, echo = FALSE}
+
+# Summary statistics of follow-up years
+mi1 %>% 
+  summarize(
+    `Total person-years`      = sum(fuyear),
+    `Follow-up years: Mean`   = mean(fuyear),
+    `Follow-up years: Median` = median(fuyear),
+    `Follow-up years: SD`     = sd(fuyear)
+  ) %>% 
+  pivot_longer(everything(), names_to = "Statistic", values_to = "Value") %>% 
+  knitr::kable(digits = 2)
+
+```
+
+### Age at diagnosis of incident CVD cases 
+
+```{r desc_age_dx, echo = FALSE}
+
+# Age at diagnosis: Mean 78.5 years, Median 78.5 years
+mi1 %>% 
+  filter(CVD_YN == "Yes") %>% 
+  summarize(
+    N                          = n(),
+    `Age at diagnosis: Mean`   = mean(ageout),
+    `Age at diagnosis: Median` = median(ageout),
+    `Age at diagnosis: SD`     = sd(ageout)
+  ) %>% 
+  pivot_longer(everything(), names_to = "Statistic", values_to = "Value") %>% 
+  mutate(Value = ifelse(Statistic == "N", as.character(Value), sprintf("%.2f", Value))) %>% 
+  knitr::kable()
+```
+
+### By cases/non-cases
+
+```{r desc_by_case_noncase, echo = FALSE}
+
+# Variables to be included
+tablevars <- c("agecat", 
+               "bene_age_at_end_2022", 
+               "bene_sex_F", 
+               "rti_race3", 
+               "marital", 
+               "educyou", 
+               "vegstat", 
+               "bmicat", 
+               "bmi", 
+               "exercise", 
+               "sleephrs", 
+               "smokecat6", 
+               "alccat", 
+               "como_depress",
+               "como_disab", 
+               "como_diabetes", 
+               "como_hypert", 
+               "como_hyperl", 
+               "como_resp", 
+               "como_anemia", 
+               "como_kidney", 
+               "como_hypoth", 
+               "como_cancers",
+               "egg_freq4",
+               "meat_gram_ea",
+               "fish_gram_ea",
+               "alldairy2_gram_ea",
+               "totalveg_gram_ea",
+               "fruits_gram_ea",
+               "refgrains_gram_ea",
+               "whole_mixed_grains_gram_ea",
+               "nutsseeds_gram_ea",
+               "legumes_gram_ea"
+               )
+
+mi1 %>%
+  mutate(CVD_YN2 = fct_recode(CVD_YN, "Non-case" = "No", "Case" = "Yes")) %>%
+  CreateTableOne(tablevars, strata = "CVD_YN2", data = ., addOverall = TRUE) %>% 
+  print(showAllLevels = TRUE) %>% 
+  kableone()
+
+```
+
+## Cox proportional hazards models
+
+### Egg x meat interaction 
+
+
+
+
