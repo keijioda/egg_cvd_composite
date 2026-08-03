@@ -51,7 +51,7 @@ mi1 <- imputed_data_list[[1]]
 
 ## Datasets
 
-* Medicare data
+* Medicare data, 2008-2022
   * For details regarding Medicare data, see [AHS-2 Medicare Linkage](https://github.com/keijioda/ahs_medicare_linkage/blob/main/summary.md) repository.
   
   * Master Beneficiary Summary File (MBSF), 2008-2022
@@ -84,7 +84,13 @@ mi1 <- imputed_data_list[[1]]
 * Prevalent CVD cases
   * At this point of analysis, prevalent cases were defined as those who were diagnosed with any of the five CVD conditions prior to their AHS-2 enrollment
   * There were 3,542 such prevalent cases. Excluding these prevalence resulted in n = 38,558
-  
+ 
+## Multiple imputation
+
+* For AHS-2 baseline data, including food-frequency questionnaire (FFQ), a guided multiple imputation was used to fill missing data ([Fraser & Yan, 2007](https://pubmed.ncbi.nlm.nih.gov/17259903/))
+  * Five imputed data sets were generated for subsequent analyses (See the analysis section for more details)
+  * For descriptive analysis, we present results from the first imputed data
+ 
 ## Incident CVD cases
 
 * Among n = 38,558 subjects, there were 12,890 incident CVD cases (33.4%)
@@ -216,15 +222,302 @@ tablevars <- c("agecat",
 mi1 %>%
   mutate(CVD_YN2 = fct_recode(CVD_YN, "Non-case" = "No", "Case" = "Yes")) %>%
   CreateTableOne(tablevars, strata = "CVD_YN2", data = ., addOverall = TRUE) %>% 
-  print(showAllLevels = TRUE) %>% 
+  print(showAllLevels = TRUE, pDigits = 4) %>% 
   kableone()
 
 ```
 
 ## Cox proportional hazards models
 
-### Egg x meat interaction 
+* To examine risk factors associated with incident CVD, we employed the Cox proportional hazards model with attained age as the time scale
+  * Age at entry was calculated based on the return date of AHS-2 questionnaire
+  * Those who died during the follow-up were censored at the date of death verified in Medicare data
+  * Those who were diagnosed with any of the CVD conditions after study enrollment were identified as incident cases and their age at diagnosis was calculated
+  * The main exposure variable of interest was the frequency of egg intake.
+    * In the AHS-2 baseline questionnaire, the frequency of egg intake was measured in 9 categories
+    * Based on its distribution, egg frequency was re-categorized into 4 groups (see the "Descriptive table" section)
+  * For meat and other food group variables, their intake was calculated in gram per day and then energy-adjusted by the residual method
+
+* Other than egg frequency (4 levels), meat intake (gram/day, energy-adjusted), and egg x meat interaction, the Cox model includes:
+  * Demographics: 
+    * From Medicare data: Sex, RTI race
+    * From AHS-2 baseline questioannaire: Marital status, educational level
+  * Lifestyles: BMI category, exercise, sleep hours, smoking status, alcohol use
+  * Dietary intake:
+    * Total energy intake (kcal/day)
+    * Fish intake (gram/day, energy-adjusted)
+    * Dairy intake (gram/day, energy-adjusted)
+    * Total vegetable intake (gram/day, energy-adjusted)
+    * Fruit intake (gram/day, energy-adjusted)
+    * Refined grain intake (gram/day, energy-adjusted)
+    * Whole/mixed grain intake (gram/day, energy-adjusted)
+    * Nuts/seeds intake (gram/day, energy-adjusted)
+    * Legume intake (gram/day, energy-adjusted)
+  * Comorbidity (from Medicare data)
+    * Depression
+    * Functional disabilities (cataract, glaucoma, hip fracture, osteoporosis, rheumatoid arthritis/osteoarthritis)
+    * Diabetes
+    * Hyperlipidemia
+    * Respiratory diseases (COPD, asthma)
+    * Anemia
+    * Chronic kidney diseases
+    * Hypothyroidism
+    * Cancers (breast, colorectal, prostate, lung, endometrial)
+
+* The models were run for each imputed data sets, yielding 5 sets of estimated beta coefficients and their variance-covariance matrix
+  * These results were combined according to Rubin's rule, and the pooled estimates of HRs and their 95% confidence intervals were produced
+  * All analyses were performed on R version 4.6.1
+
+### Hazard ratios for variables other than egg and meat intake
+
+* See the estimated hazard ratios for variables other than egg and meat intake
+  * Note that the reference levels are omitted in the table below
+
+```{r cox_model_HR_other, echo = FALSE}
+
+# Cox models --------------------------------------------------------------
+
+# Model 1 -----------------------------------------------------------------
+
+# Demographics, lifestyles, egg intake (as categorical) and kcal
+mod1_full_fm <- Surv(agein, ageout, inc_CVD) ~ egg_freq4 + bene_sex_F + rti_race3 + marital +
+  educyou2 + bmicat + exercise + sleephrs2 + smokecat6 + alccat + kcal100
+
+# Model 2 -----------------------------------------------------------------
+
+# Adjusting for other foods
+# Meat as categorical, other food groups as continuous
+
+# Full model
+mod2_full_fm <- update(
+  mod1_full_fm, 
+  . ~ . + meat_gram_ea100 + fish_gram_ea100 + alldairy2_gram_ea100 + totalveg_gram_ea100 +
+    fruits_gram_ea100 + refgrains_gram_ea100 + whole_mixed_grains_gram_ea100 +
+    nutsseeds_gram_ea100 + legumes_gram_ea100
+)
+
+# Model 3 -----------------------------------------------------------------
+
+# Further adjusting for comorbidity 
+
+# Full model
+mod3_full_fm <- update(
+  mod2_full_fm, 
+  . ~ . + como_depress + como_disab + como_diabetes + como_hyperl  + como_resp + 
+    como_anemia + como_kidney + como_hypoth + como_cancers
+)
+
+# Checking interactions ---------------------------------------------------
+
+# Based on Model 3
+# Check for egg x meat interaction -- Significant p = 0.018
+mod4a_full_fm <- update(mod3_full_fm, . ~ . + egg_freq4 * meat_gram_ea100)
+
+fit_mod4a_full <- lapply(imputed_data_list, function(d) {
+  coxph(mod4a_full_fm, data = d, method = "efron")
+})
+
+mira_fit_mod4a_full <- as.mira(fit_mod4a_full)
+
+# HRs for other variables -------------------------------------------------
+
+# Extract variable names from the formula (preserve model order)
+var_names_ordered <- all.vars(mod4a_full_fm)[-(1:3)] %>%   # drop agein, ageout, inc_CVD
+  unique()
+
+# Longest-first version, used only for matching (avoids partial-match issues like sleephrs2 vs sleephrs)
+var_names_for_match <- var_names_ordered[order(-nchar(var_names_ordered))]
+
+extract_var_level <- function(term, var_names) {
+  term <- as.character(term)
+  match_idx <- which(startsWith(term, var_names))[1]
+  if (is.na(match_idx)) {
+    return(tibble(Variable = term, Level = NA_character_))
+  }
+  v <- var_names[match_idx]
+  lvl <- sub(paste0("^", v), "", term)
+  tibble(Variable = v, Level = ifelse(lvl == "", NA_character_, lvl))
+}
+
+result <- mira_fit_mod4a_full %>% 
+  pool() %>% 
+  summary(conf.int = TRUE, exp = TRUE, conf.level = .95) %>% 
+  select(term, estimate, conf.low, conf.high, p.value) %>% 
+  filter(!str_detect(term, "egg|meat")) %>% 
+  mutate(
+    HR = sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
+    p.value = ifelse(p.value < 0.0001, "<.0001", sprintf("%.4f", p.value))
+  )
+
+var_level <- purrr::map_dfr(as.character(result$term), extract_var_level, var_names = var_names_for_match)
+
+result %>% 
+  bind_cols(var_level) %>% 
+  select(Variable, Level, HR, p.value) %>% 
+  mutate(Level = ifelse(is.na(Level), "", Level)) %>% 
+  knitr::kable(row.names = FALSE)
+
+```
+
+### Hazard ratios with egg x meat interaction 
+
+* No egg & no meat as reference
+
+```{r egg_meat_intx_HRs, echo = FALSE}
+
+# HRs with egg x meat interaction -----------------------------------------
+
+# Pool coefficient vector + FULL covariance matrix via Rubin's rules
+# (this is what pool() does internally before it collapses to per-term
+# variances — we need to stop one step earlier and keep the matrix)
+pool_coef_vcov <- function(fit_list) {
+  m <- length(fit_list)
+  coefs <- lapply(fit_list, coef)
+  vcovs <- lapply(fit_list, vcov)
+  
+  qbar <- Reduce(`+`, coefs) / m                      # pooled point estimate
+  ubar <- Reduce(`+`, vcovs) / m                       # within-imputation covariance
+  b    <- Reduce(`+`, lapply(coefs, function(q) tcrossprod(q - qbar))) / (m - 1)  # between-imputation covariance
+  t_mat <- ubar + (1 + 1 / m) * b                      # total pooled covariance
+  
+  list(qbar = qbar, vcov = t_mat)
+}
+
+# Generalized joint HR: egg level e vs "None", meat = m vs 0, from the SAME
+# joint reference cell (None, meat=0) -- includes the meat main effect,
+# unlike intx_hr_egg_pooled() which held meat fixed across the comparison.
+joint_hr_pooled <- function(fit_list, meat_main_term, egg_main_term = NULL,
+                            egg_meat_intx_term = NULL, meat_gram_value) {
+  p <- pool_coef_vcov(fit_list)
+  qbar <- p$qbar
+  V    <- p$vcov
+  
+  L <- qbar
+  L[] <- 0
+  L[meat_main_term] <- meat_gram_value
+  if (!is.null(egg_main_term))      L[egg_main_term]      <- 1
+  if (!is.null(egg_meat_intx_term)) L[egg_meat_intx_term] <- meat_gram_value
+  
+  est <- qbar %*% L
+  se  <- sqrt(t(L) %*% V %*% L)
+  lwr <- est - qnorm(0.975) * se
+  upr <- est + qnorm(0.975) * se
+  c(est, lwr, upr) %>% exp()
+}
+
+# Egg terms, including "None" (no main/interaction term -- reference level)
+egg_terms <- list(
+  "None"   = list(main = NULL, intx = NULL),
+  "1-3/mo" = list(main = "egg_freq41-3/mo", intx = "egg_freq41-3/mo:meat_gram_ea100"),
+  "1-4/wk" = list(main = "egg_freq41-4/wk", intx = "egg_freq41-4/wk:meat_gram_ea100"),
+  "5+/wk"  = list(main = "egg_freq45+/wk",  intx = "egg_freq45+/wk:meat_gram_ea100")
+)
+
+# Meat values in grams/day, as in the table -- converted to the model's
+# _100 scale (meat_gram_ea100 = meat_gram_ea / 100) inside the call
+meat_values_gramday <- c(0, 10, 30, 100)
+
+hr_table <- expand_grid(
+  egg_freq4    = names(egg_terms),
+  meat_gramday = meat_values_gramday
+) %>%
+  pmap_dfr(function(egg_freq4, meat_gramday) {
+    terms <- egg_terms[[egg_freq4]]
+    hr <- joint_hr_pooled(
+      fit_mod4a_full,
+      meat_main_term     = "meat_gram_ea100",
+      egg_main_term      = terms$main,
+      egg_meat_intx_term = terms$intx,
+      meat_gram_value    = meat_gramday / 100
+    )
+    data.frame(egg_freq4 = egg_freq4, meat_gramday = meat_gramday,
+               HR = hr[1], lwr = hr[2], upr = hr[3])
+  }) %>%
+  mutate(egg_freq4 = factor(egg_freq4, levels = names(egg_terms)))
 
 
+hr_table_wide <- hr_table %>%
+  mutate(cell = sprintf("%.2f (%.2f, %.2f)", HR, lwr, upr)) %>%
+  mutate(`Meat intake (gram/day)` = meat_gramday) %>% 
+  select(`Meat intake (gram/day)`, egg_freq4, cell) %>%
+  pivot_wider(names_from = egg_freq4, values_from = cell)
+
+hr_table_wide %>% 
+  knitr::kable()
+
+```
+
+### Graphical representation of HRs
 
 
+```{r egg_meat_intx_HR_forest_plot, echo = FALSE, fig.height = 8, fig.width = 9}
+
+# Forest plot
+meat_values_gramday <- c(0, 10, 30, 100)   # match what you used to build hr_table
+
+plot_data <- hr_table %>%
+  mutate(
+    egg_label = recode(as.character(egg_freq4),
+                       "None"   = "Egg intake: None",
+                       "1-3/mo" = "Egg intake: 1-3 times/month",
+                       "1-4/wk" = "Egg intake: 1-4 times/week",
+                       "5+/wk"  = "Egg intake: 5+ times/week"),
+    egg_label = factor(egg_label, levels = c("Egg intake: None",
+                                             "Egg intake: 1-3 times/month",
+                                             "Egg intake: 1-4 times/week",
+                                             "Egg intake: 5+ times/week")),
+    meat_label = factor(paste0("Meat: ", meat_gramday, " g/d"),
+                        levels = paste0("Meat: ", rev(meat_values_gramday), " g/d")),
+    is_ref  = egg_freq4 == "None" & meat_gramday == 0,
+    sig_cat = case_when(
+      is_ref  ~ "Reference",
+      lwr > 1 ~ "HR > 1, significant",
+      upr < 1 ~ "HR < 1, significant",
+      TRUE    ~ "Not significant"
+    ),
+    sig_cat = factor(sig_cat, levels = c("HR > 1, significant", "HR < 1, significant",
+                                         "Not significant", "Reference")),
+    label = ifelse(is_ref, "1.00 (Ref)", sprintf("%.2f (%.2f, %.2f)", HR, lwr, upr))
+  )
+
+x_label_pos <- max(plot_data$upr, na.rm = TRUE) * 1.15   # just past the widest CI bar
+x_max       <- x_label_pos * 1.20                          # room for the text column itself
+
+p <- ggplot(plot_data, aes(x = HR, y = meat_label, color = sig_cat, shape = sig_cat)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "grey60") +
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0, linewidth = 0.7,
+                orientation = "y", data = filter(plot_data, !is_ref)) +
+  geom_point(size = 3) +
+  geom_text(aes(x = x_label_pos, label = label), color = "black", hjust = 0, size = 3.6) +
+  facet_wrap(vars(egg_label), ncol = 1, scales = "free_y", strip.position = "top") +
+  scale_x_log10(breaks = c(0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
+                limits = c(0.75, x_max),
+                expand = expansion(mult = c(0.02, 0.02))) +
+  scale_color_manual(values = c("HR > 1, significant" = "#D2691E",
+                                 "HR < 1, significant" = "#1B5E56",
+                                 "Not significant"     = "grey55",
+                                 "Reference"            = "black"),
+                     breaks = c("HR > 1, significant", "HR < 1, significant")) +
+  scale_shape_manual(values = c("HR > 1, significant" = 16,
+                                 "HR < 1, significant" = 16,
+                                 "Not significant"     = 16,
+                                 "Reference"             = 18),
+                     breaks = c("HR > 1, significant", "HR < 1, significant")) +
+   labs(x = "Hazard ratio (log scale)", y = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.placement    = "outside",
+    strip.text         = element_text(face = "bold", hjust = 0, size = 13),
+    strip.background   = element_rect(fill = "grey93", color = NA),
+    panel.spacing      = unit(0.6, "lines"),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position    = "bottom",
+    legend.title       = element_blank(),
+    plot.title         = element_text(face = "bold"),
+    axis.text.y        = element_text(size = 11)
+  ) +
+  coord_cartesian(clip = "off")
+
+print(p)
+```

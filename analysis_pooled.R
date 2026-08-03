@@ -157,6 +157,46 @@ mira_fit_mod4d_full <- as.mira(fit_mod4d_full)
 D1(mira_fit_mod4d_full, mira_fit_mod3_full)
 
 
+# HRs for other variables -------------------------------------------------
+
+mod4a_full_fm
+
+# Extract variable names from the formula (preserve model order)
+var_names_ordered <- all.vars(mod4a_full_fm)[-(1:3)] %>%   # drop agein, ageout, inc_CVD
+  unique()
+
+# Longest-first version, used only for matching (avoids partial-match issues like sleephrs2 vs sleephrs)
+var_names_for_match <- var_names_ordered[order(-nchar(var_names_ordered))]
+
+extract_var_level <- function(term, var_names) {
+  term <- as.character(term)
+  match_idx <- which(startsWith(term, var_names))[1]
+  if (is.na(match_idx)) {
+    return(tibble(Variable = term, Level = NA_character_))
+  }
+  v <- var_names[match_idx]
+  lvl <- sub(paste0("^", v), "", term)
+  tibble(Variable = v, Level = ifelse(lvl == "", NA_character_, lvl))
+}
+
+result <- mira_fit_mod4a_full %>% 
+  pool() %>% 
+  summary(conf.int = TRUE, exp = TRUE, conf.level = .95) %>% 
+  select(term, estimate, conf.low, conf.high, p.value) %>% 
+  filter(!str_detect(term, "egg|meat")) %>% 
+  mutate(
+    HR = sprintf("%.2f (%.2f, %.2f)", estimate, conf.low, conf.high),
+    p.value = ifelse(p.value < 0.0001, "<.0001", sprintf("%.4f", p.value))
+  )
+
+var_level <- purrr::map_dfr(as.character(result$term), extract_var_level, var_names = var_names_for_match)
+
+result %>% 
+  bind_cols(var_level) %>% 
+  select(Variable, Level, HR, p.value) %>% 
+  knitr::kable(row.names = FALSE)
+
+
 # HRs with egg x meat interaction -----------------------------------------
 
 # Pool coefficient vector + FULL covariance matrix via Rubin's rules
