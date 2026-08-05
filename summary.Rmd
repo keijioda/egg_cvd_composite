@@ -8,7 +8,7 @@ always_allow_html: true
 knitr::opts_chunk$set(echo = TRUE)
 
 # Required packages
-pacs <- c("tidyverse", "tableone", "survival", "mice")
+pacs <- c("tidyverse", "tableone", "survival", "mice", "kableExtra")
 sapply(pacs, require, character.only = TRUE)
 
 # Read the list of imputed data -------------------------------------------
@@ -34,7 +34,7 @@ mi1 <- imputed_data_list[[1]]
   * Acute myocardial infarction
   * Congestive heart failure (in 27 chronic conditions) or heart failure and non-ischemic heart disease (in 30 chronic conditions)
   * Atrial fibrillation
-* For disease definition, see [Chronic Conditions Data Warehouse](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
+* For disease definitions, see [Chronic Conditions Data Warehouse](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
   * Note that the definitions may differ between 27 chronic conditions (available in 2008-2020 data) and 30 chronic conditions (2021-2022)
 
 ## Exposure of interest
@@ -47,7 +47,7 @@ mi1 <- imputed_data_list[[1]]
 * Meat intake, gram/day
   * Energy-adjusted
   
-* Multiplicative interaction terms between egg intake category and meat intake (g/d) will be assessed in Cox proportional hazards models
+* Multiplicative interaction terms between egg intake category and meat intake (g/d) were assessed in Cox proportional hazards models
 
 ## Datasets
 
@@ -59,21 +59,20 @@ mi1 <- imputed_data_list[[1]]
     
   * Chronic Conditions file (CC), 2008-2022
     * Contains the first occurrence date of [27 (or 30) specific chronic conditions](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
-    * Used to identify prevalent/incident cases of CVD and
-    * to identify comorbidities, based on ICD-9 and ICD-10 codes
+    * Used to identify prevalent/incident cases of CVD and to identify comorbidities, based on ICD-9 and ICD-10 codes
     
   * Both files include n = 46,897 unique subjects across years, after excluding 
     * Gender/DOB mismatch with AHS-2 data
-    * Dupulicate beneficiary IDs and SSNs
+    * Duplicate beneficiary IDs and SSNs
 
 * AHS-2 baseline data: n = 96,144
   
 * After merging Medicare and AHS-2 data, there were n = 43,467 subjects
-  * Participants who opted out from the study or those who live outside the U.S were already excluded at this point
+  * Participants who opted out from the study or those who live outside the U.S. were already excluded at this point
 
 ## Inclusion/exclusion criteria
 
-* Medicare beneficiaries who did not reach the age of 65 between 2008 and 2022 (e.g., younger beneficiaries with disabilities or end-stage renal disease) were excluded (n = 1238), resulting n = 42,229.
+* Medicare beneficiaries who did not reach the age of 65 between 2008 and 2022 (e.g., younger beneficiaries with disabilities or end-stage renal disease) were excluded (n = 1238), resulting in n = 42,229.
 
 * n = 106 subjects with extreme BMI (<16 or >60), according to AHS questionnaire, were excluded, resulting n = 42,123.
 
@@ -83,19 +82,19 @@ mi1 <- imputed_data_list[[1]]
 
 * Prevalent CVD cases
   * At this point of analysis, prevalent cases were defined as those who were diagnosed with any of the five CVD conditions prior to their AHS-2 enrollment
-  * There were 3,542 such prevalent cases. Excluding these prevalence resulted in n = 38,558
+  * There were 3,542 such prevalent cases. Excluding these prevalen cases resulted in n = 38,558
  
 ## Multiple imputation
 
-* For AHS-2 baseline data, including food-frequency questionnaire (FFQ), a guided multiple imputation was used to fill missing data ([Fraser & Yan, 2007](https://pubmed.ncbi.nlm.nih.gov/17259903/))
+* For AHS-2 baseline data, including food-frequency questionnaire (FFQ), a guided multiple imputation was used to fill in missing data ([Fraser & Yan, 2007](https://pubmed.ncbi.nlm.nih.gov/17259903/))
   * Five imputed data sets were generated for subsequent analyses (See the analysis section for more details)
-  * For descriptive analysis, we present results from the first imputed data
+  * For descriptive analysis, we present results from the first imputed dataset
  
 ## Incident CVD cases
 
 * Among n = 38,558 subjects, there were 12,890 incident CVD cases (33.4%)
   * Among these cases, there were 223 incident cases within 6 months after AHS-2 enrollment
-  * Similarly, numbers of incident cases within 12, 18, 24 36, and 48 months are shown below:
+  * Similarly, numbers of incident cases within 12, 18, 24, 36, and 48 months are shown below:
 
 ```{r incidence_after_enrollment, echo = FALSE}
 # How many were diagnosed within 6, 12,...months after enrollment?
@@ -241,7 +240,7 @@ mi1 %>%
 * Other than egg frequency (4 levels), meat intake (gram/day, energy-adjusted), and egg x meat interaction, the Cox model includes:
   * Demographics: 
     * From Medicare data: Sex, RTI race
-    * From AHS-2 baseline questioannaire: Marital status, educational level
+    * From AHS-2 baseline questionnaire: Marital status, educational level
   * Lifestyles: BMI category, exercise, sleep hours, smoking status, alcohol use
   * Dietary intake:
     * Total energy intake (kcal/day)
@@ -264,9 +263,9 @@ mi1 %>%
     * Hypothyroidism
     * Cancers (breast, colorectal, prostate, lung, endometrial)
 
-* The models were run for each imputed data sets, yielding 5 sets of estimated beta coefficients and their variance-covariance matrix
-  * These results were combined according to Rubin's rule, and the pooled estimates of HRs and their 95% confidence intervals were produced
-  * All analyses were performed on R version 4.6.1
+* The models were run for each of the imputed data sets, yielding 5 sets of estimated beta coefficients and their variance-covariance matrix
+  * These results were combined according to Rubin's rules, and the pooled estimates of HRs and their 95% confidence intervals were produced
+  * All analyses were performed in R version 4.6.1
 
 ### Hazard ratios for variables other than egg and meat intake
 
@@ -359,13 +358,19 @@ result %>%
 
 ```
 
-### Hazard ratios with egg x meat interaction 
+### Hazard ratios for the joint effect of egg and meat intake 
 
-* No egg & no meat as reference
-
+* One way to illustrate the negative interaction between egg and meat intake is to calculate hazard ratios for each egg intake group at representative levels of meat intake. We chose meat intakes of 0, 10, 30, and 100 grams/day and estimated HRs for all egg × meat combinations, using "no egg intake and no meat intake" as the reference group. These HRs reflect the joint risk of egg and meat intake combined, relative to this "healthiest" reference group (no eggs, no meat).
+  * The HRs are shown in the table below
+  * Trend p-values for egg frequency, calculated at each level of meat intake, are shown in the last column of the table
+  * Trend p-values for meat intake, calculated within each egg frequency group, are shown in the last row of the table
+  
 ```{r egg_meat_intx_HRs, echo = FALSE}
 
 # HRs with egg x meat interaction -----------------------------------------
+
+# Pool the results
+pooled <- pool(mira_fit_mod4a_full)
 
 # Pool coefficient vector + FULL covariance matrix via Rubin's rules
 # (this is what pool() does internally before it collapses to per-term
@@ -435,20 +440,117 @@ hr_table <- expand_grid(
   }) %>%
   mutate(egg_freq4 = factor(egg_freq4, levels = names(egg_terms)))
 
-
 hr_table_wide <- hr_table %>%
-  mutate(cell = sprintf("%.2f (%.2f, %.2f)", HR, lwr, upr)) %>%
-  mutate(`Meat intake (gram/day)` = meat_gramday) %>% 
-  select(`Meat intake (gram/day)`, egg_freq4, cell) %>%
+  mutate(
+    is_ref = egg_freq4 == "None" & meat_gramday == 0,
+    cell   = ifelse(is_ref, "1.00 (Ref)", sprintf("%.2f (%.2f, %.2f)", HR, lwr, upr))
+  ) %>%
+  select(meat_gramday, egg_freq4, cell) %>%
   pivot_wider(names_from = egg_freq4, values_from = cell)
 
-hr_table_wide %>% 
-  knitr::kable()
+# Incorporate trend-p into the table
+# Function for trend p-value
+get_wald_p_pooled <- function(fit_list, coef_names, coef_wt) {
+  p    <- pool_coef_vcov(fit_list)
+  qbar <- p$qbar
+  V    <- p$vcov
+  
+  # Safety check: every requested name must exist in the pooled coefficient
+  # vector, or L[coef_names] <- coef_wt would silently create NA entries
+  # instead of erroring.
+  missing_terms <- setdiff(coef_names, names(qbar))
+  if (length(missing_terms) > 0) {
+    stop("Term(s) not found in model coefficients: ",
+         paste(missing_terms, collapse = ", "))
+  }
+  
+  L <- qbar
+  L[] <- 0
+  L[coef_names] <- coef_wt
+  
+  est    <- qbar %*% L
+  se     <- sqrt(t(L) %*% V %*% L)
+  wald_p <- as.numeric(2 * (1 - pnorm(abs(est / se))))
+  return(wald_p)
+}
+
+# Collect the meat trend p-values, one per egg group (columns)
+p_trend_meat <- c(
+  "None"   = summary(pooled) %>% filter(term == "meat_gram_ea100") %>% pull(p.value),
+  "1-3/mo" = get_wald_p_pooled(fit_mod4a_full,
+                               coef_names = c("meat_gram_ea100", "egg_freq41-3/mo:meat_gram_ea100"),
+                               coef_wt    = c(1, 1)),
+  "1-4/wk" = get_wald_p_pooled(fit_mod4a_full,
+                               coef_names = c("meat_gram_ea100", "egg_freq41-4/wk:meat_gram_ea100"),
+                               coef_wt    = c(1, 1)),
+  "5+/wk"  = get_wald_p_pooled(fit_mod4a_full,
+                               coef_names = c("meat_gram_ea100", "egg_freq45+/wk:meat_gram_ea100"),
+                               coef_wt    = c(1, 1))
+)
+
+# Replace egg_freq4 with its numeric values, 1, 2, 3, 4
+mod4b_full_fm <- update(
+  mod4a_full_fm, 
+  . ~ . - egg_freq4 - egg_freq4:meat_gram_ea100 + as.numeric(egg_freq4) + as.numeric(egg_freq4):meat_gram_ea100
+  )
+
+fit_mod4b_full <- lapply(imputed_data_list, function(d) {
+  coxph(mod4b_full_fm, data = d, method = "efron")
+})
+
+# Collect the egg trend p-values, one per meat level (rows)
+p_trend_egg <- c(
+  "0"   = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 0)),
+  "10"  = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 10 / 100)),
+  "30"  = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 30 / 100)),
+  "100" = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 100 / 100))
+)
+
+# Helper to format p-values consistently
+fmt_p <- function(p) ifelse(p < 0.0001, "<0.0001", sprintf("%.4f", p))
+
+# Add the right-margin column (egg trend p, one per meat row)
+hr_table_wide <- hr_table_wide %>%
+  mutate(`P-trend (egg)` = fmt_p(p_trend_egg[as.character(meat_gramday)]))
+
+# Add the bottom-margin row (meat trend p, one per egg column)
+bottom_row <- setNames(
+  as.list(c(
+    NA,
+    fmt_p(p_trend_meat[c("None", "1-3/mo", "1-4/wk", "5+/wk")]),
+    ""
+  )),
+  names(hr_table_wide)
+) %>% as_tibble()
+
+hr_table_final <- hr_table_wide %>%
+  mutate(meat_gramday = as.character(meat_gramday)) %>%
+  bind_rows(bottom_row) %>%
+  mutate(meat_gramday = ifelse(is.na(meat_gramday), "P-trend (meat)", meat_gramday))
+
+# hr_table_final %>% 
+#   knitr::kable()
+
+hr_table_final %>%
+  rename(`Meat intake (g/day)` = meat_gramday) %>%
+  kable(
+    col.names = c("Meat intake (g/day)", "None", "1-3/mo", "1-4/wk", "5+/wk", "P-trend (egg)"),
+    align = "lccccc"
+  ) %>%
+  kable_styling(full_width = FALSE) %>%
+  add_header_above(c(" " = 1, "Egg frequency" = 4, " " = 1))
 
 ```
 
-### Graphical representation of HRs
-
+* Shown below is a forest plot depicting the HRs for egg × meat combinations:
 
 ```{r egg_meat_intx_HR_forest_plot, echo = FALSE, fig.height = 8, fig.width = 9}
 
@@ -521,3 +623,205 @@ p <- ggplot(plot_data, aes(x = HR, y = meat_label, color = sig_cat, shape = sig_
 
 print(p)
 ```
+
+### Hazard ratios for egg frequency estimated at different meat intake level
+
+* Another way to illustrate the egg x meat interaction, and one that isolates the egg effect more directly, is to calculate hazard ratios for egg frequency at each level of meat intake. For meat intakes of 0, 10, 30, and 100 grams/day, we separately estimated HRs for egg frequency groups, using "no egg intake" as the reference at each meat level. These HRs show how the association between egg intake and CVD risk is modified by meat intake
+
+
+```{r egg_HRs_with_meat_intx, echo = FALSE}
+
+# HRs for egg freq at meat intake levels ----------------------------------
+
+# Function to estimate pooled HR for egg with interaction
+intx_hr_egg_pooled <- function(fit_list, egg_main_term, egg_meat_intx_term, meat_gram_value) {
+  p    <- pool_coef_vcov(fit_list)
+  qbar <- p$qbar
+  V    <- p$vcov
+  
+  # Safety check, same pattern as get_wald_p_pooled()
+  needed <- c(egg_main_term, egg_meat_intx_term)
+  missing_terms <- setdiff(needed, names(qbar))
+  if (length(missing_terms) > 0) {
+    stop("Term(s) not found in model coefficients: ",
+         paste(missing_terms, collapse = ", "))
+  }
+  
+  L <- qbar
+  L[] <- 0
+  L[egg_main_term]      <- 1
+  L[egg_meat_intx_term] <- meat_gram_value
+  
+  est <- qbar %*% L
+  se  <- sqrt(t(L) %*% V %*% L)
+  lwr <- est - qnorm(0.975) * se
+  upr <- est + qnorm(0.975) * se
+  c(est, lwr, upr) %>% exp()
+}
+
+egg_labels <- c("1-3/mo", "1-4/wk", "5+/wk")
+egg_main_terms <- c("egg_freq41-3/mo", "egg_freq41-4/wk", "egg_freq45+/wk")
+egg_intx_terms <- c("egg_freq41-3/mo:meat_gram_ea100",
+                    "egg_freq41-4/wk:meat_gram_ea100",
+                    "egg_freq45+/wk:meat_gram_ea100")
+
+# Helper to build the HR table for one meat value, looping over all 3 egg terms
+egg_hr_at_meat <- function(fit_list, meat_gramday) {
+  purrr::pmap_dfr(
+    list(egg_main_terms, egg_intx_terms, egg_labels),
+    function(main_term, intx_term, label) {
+      hr <- intx_hr_egg_pooled(fit_list, main_term, intx_term, meat_gramday / 100)
+      tibble(Meat = paste0(meat_gramday, " g/d"), Egg = label,
+             HR = hr[1], Lower = hr[2], Upper = hr[3])
+    }
+  )
+}
+
+meat_values_gramday <- c(0, 10, 30, 100)
+egg_hr_table <- purrr::map_dfr(meat_values_gramday, ~ egg_hr_at_meat(fit_mod4a_full, .x))
+
+
+egg_hr_wide <- egg_hr_table %>%
+  mutate(
+    meat_gramday = as.numeric(sub(" g/d", "", Meat)),
+    cell = sprintf("%.2f (%.2f, %.2f)", HR, Lower, Upper)
+  ) %>%
+  select(meat_gramday, Egg, cell) %>%
+  pivot_wider(names_from = Egg, values_from = cell) %>%
+  mutate(None = "1.00 (Ref)") %>%
+  select(meat_gramday, None, `1-3/mo`, `1-4/wk`, `5+/wk`) %>%
+  arrange(meat_gramday) %>%
+  mutate(`P-trend` = fmt_p(p_trend_egg[as.character(meat_gramday)]))
+
+egg_hr_wide %>%
+  kable(
+    col.names = c("Meat intake (gram/day)", "None", "1-3 times/month",
+                  "1-4 times/week", "5+ times/week", "P-trend"),
+    align = "lccccc"
+  ) %>%
+  kable_styling(full_width = FALSE) %>%
+  add_header_above(c(" " = 1, "Egg intake (frequency)" = 4, " " = 1))
+
+```
+
+```{r egg_HR_by_meat_line_plot, echo = FALSE, fig.height = 3, fig.width = 10}
+
+# Add "None" reference rows (HR = 1, no CI) for each meat level
+none_rows <- tibble(
+  Meat = paste0(c(0, 10, 30, 100), " g/d"),
+  Egg  = "None",
+  HR = 1, Lower = NA, Upper = NA,
+  meat_gramday = c(0, 10, 30, 100)
+)
+
+egg_hr_plot_data <- egg_hr_table %>%
+  mutate(meat_gramday = as.numeric(sub(" g/d", "", Meat))) %>%
+  bind_rows(none_rows) %>%
+  mutate(Egg = factor(Egg, levels = c("None", "1-3/mo", "1-4/wk", "5+/wk")))
+
+ggplot(egg_hr_plot_data, aes(x = Egg, y = HR)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey50") +
+  geom_point(aes(shape = Egg == "None", color = Egg == "None"),
+             size = 3, show.legend = FALSE) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2) +
+  scale_shape_manual(values = c("TRUE" = 18, "FALSE" = 16)) +
+  scale_color_manual(values = c("TRUE" = "red", "FALSE" = "black")) +
+  scale_x_discrete(labels = c("None" = "None\n(Ref)", "1-3/mo" = "1-3/mo",
+                              "1-4/wk" = "1-4/wk", "5+/wk" = "5+/wk")) +
+  scale_y_log10(breaks = c(0.6, 0.7, 0.8, 0.9, 1, 1.5, 2)) +
+  facet_wrap(~ factor(meat_gramday, levels = c(0, 10, 30, 100),
+                      labels = paste0("Meat: ", c(0, 10, 30, 100), " g/d")),
+             nrow = 1) +
+  labs(x = "Egg intake frequency", y = "Hazard ratio (log scale)") +
+  theme_minimal() +
+  theme(
+    strip.background = element_rect(fill = "grey85", color = "grey50"),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+### Checking the linearity of dietary variables
+
+* To examine whether the associations between meat and other dietary intakes and log hazard were linear, we fit Cox models using restricted cubic splines with 4 knots for each energy-adjusted dietary variable (grams/day). None of the dietary variables showed a significant nonlinear association with incident CVD, except for fruit intake (p = 0.0290).
+
+
+```{r cox_dietary_check_nonlinear, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(rms)
+library(Hmisc)
+
+# --- Step 1: Fix knot locations across all imputed datasets --------------
+
+vars_rcs <- c("meat_gram_ea", "fish_gram_ea", "alldairy2_gram_ea",
+              "totalveg_gram_ea", "fruits_gram_ea", "refgrains_gram_ea",
+              "whole_mixed_grains_gram_ea", "nutsseeds_gram_ea", "legumes_gram_ea")
+
+stacked_data <- bind_rows(imputed_data_list)
+
+knot_list <- lapply(vars_rcs, function(v) {
+  rcspline.eval(stacked_data[[v]], nk = 4, knots.only = TRUE)
+})
+names(knot_list) <- vars_rcs
+
+# --- Step 2: Fit cph with FIXED knots on each imputed dataset ------------
+
+# Build the rcs terms programmatically with explicit knot locations
+rcs_terms <- sapply(vars_rcs, function(v) {
+  k <- paste(round(knot_list[[v]], 4), collapse = ",")
+  sprintf("rcs(%s, parms = c(%s))", v, k)
+})
+
+rcs_formula_rhs <- paste(rcs_terms, collapse = " + ")
+
+mod3_rcs_fm <- as.formula(paste(
+  "Surv(agein, ageout, inc_CVD) ~ bene_sex_F + rti_race3 + marital + educyou2 +",
+  "bmicat + exercise + sleephrs2 + smokecat6 + alccat + kcal100 +", rcs_formula_rhs
+))
+
+fit_mod3_rcs_list <- lapply(imputed_data_list, function(d) {
+  dd <<- datadist(d)              # <<- assigns to global env, not local scope
+  options(datadist = "dd")
+  cph(mod3_rcs_fm, data = d, method = "efron", x = TRUE, y = TRUE)
+})
+
+# --- Step 3: Pool coefficients + covariance via Rubin's rules -------------
+
+pooled_rcs <- pool_coef_vcov(fit_mod3_rcs_list)
+qbar <- pooled_rcs$qbar
+V    <- pooled_rcs$vcov
+
+# --- Step 4: Multi-df Wald chi-square test for nonlinearity --------------
+
+# Tests H0: all NONLINEAR spline coefficients for a given variable = 0
+wald_chisq_pooled <- function(qbar, V, coef_names) {
+  L <- matrix(0, nrow = length(coef_names), ncol = length(qbar),
+              dimnames = list(coef_names, names(qbar)))
+  for (i in seq_along(coef_names)) L[i, coef_names[i]] <- 1
+  
+  Lq   <- L %*% qbar
+  LVLt <- L %*% V %*% t(L)
+  chisq <- as.numeric(t(Lq) %*% solve(LVLt) %*% Lq)
+  df    <- length(coef_names)
+  p     <- pchisq(chisq, df = df, lower.tail = FALSE)
+  c(chisq = chisq, df = df, p_nonlinear = p)
+}
+
+# Nonlinear terms for a given rcs variable are all basis columns EXCEPT the
+# first (linear) one -- with 4 knots, rcs() produces 3 basis columns total:
+nonlinear_terms <- function(varname, all_names) {
+  grep(paste0("^", varname, "'"), all_names, value = TRUE)
+}
+
+# --- Step 5: Run nonlinearity test for each rcs variable ------------------
+nonlin_results <- lapply(vars_rcs, function(v) {
+  nl_terms <- nonlinear_terms(v, names(qbar))
+  res <- wald_chisq_pooled(qbar, V, nl_terms)
+  data.frame(variable = v, chisq = res["chisq"], df = res["df"], p_nonlinear = res["p_nonlinear"])
+}) %>% bind_rows()
+
+nonlin_results %>% 
+  as_tibble() %>% 
+  knitr::kable(digits = c(0, 2, 0, 4))
+
+```
+

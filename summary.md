@@ -19,7 +19,7 @@ Egg composite CVD study
   - Congestive heart failure (in 27 chronic conditions) or heart failure
     and non-ischemic heart disease (in 30 chronic conditions)
   - Atrial fibrillation
-- For disease definition, see [Chronic Conditions Data
+- For disease definitions, see [Chronic Conditions Data
   Warehouse](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
   - Note that the definitions may differ between 27 chronic conditions
     (available in 2008-2020 data) and 30 chronic conditions (2021-2022)
@@ -37,7 +37,7 @@ Egg composite CVD study
   - Energy-adjusted
 
 - Multiplicative interaction terms between egg intake category and meat
-  intake (g/d) will be assessed in Cox proportional hazards models
+  intake (g/d) were assessed in Cox proportional hazards models
 
 ## Datasets
 
@@ -55,27 +55,27 @@ Egg composite CVD study
 
     - Contains the first occurrence date of [27 (or 30) specific chronic
       conditions](https://www2.ccwdata.org/web/guest/condition-categories-chronic)
-    - Used to identify prevalent/incident cases of CVD and
-    - to identify comorbidities, based on ICD-9 and ICD-10 codes
+    - Used to identify prevalent/incident cases of CVD and to identify
+      comorbidities, based on ICD-9 and ICD-10 codes
 
   - Both files include n = 46,897 unique subjects across years, after
     excluding
 
     - Gender/DOB mismatch with AHS-2 data
-    - Dupulicate beneficiary IDs and SSNs
+    - Duplicate beneficiary IDs and SSNs
 
 - AHS-2 baseline data: n = 96,144
 
 - After merging Medicare and AHS-2 data, there were n = 43,467 subjects
 
   - Participants who opted out from the study or those who live outside
-    the U.S were already excluded at this point
+    the U.S. were already excluded at this point
 
 ## Inclusion/exclusion criteria
 
 - Medicare beneficiaries who did not reach the age of 65 between 2008
   and 2022 (e.g., younger beneficiaries with disabilities or end-stage
-  renal disease) were excluded (n = 1238), resulting n = 42,229.
+  renal disease) were excluded (n = 1238), resulting in n = 42,229.
 
 - n = 106 subjects with extreme BMI (\<16 or \>60), according to AHS
   questionnaire, were excluded, resulting n = 42,123.
@@ -93,18 +93,18 @@ Egg composite CVD study
   - At this point of analysis, prevalent cases were defined as those who
     were diagnosed with any of the five CVD conditions prior to their
     AHS-2 enrollment
-  - There were 3,542 such prevalent cases. Excluding these prevalence
-    resulted in n = 38,558
+  - There were 3,542 such prevalent cases. Excluding these prevalen
+    cases resulted in n = 38,558
 
 ## Multiple imputation
 
 - For AHS-2 baseline data, including food-frequency questionnaire (FFQ),
-  a guided multiple imputation was used to fill missing data ([Fraser &
-  Yan, 2007](https://pubmed.ncbi.nlm.nih.gov/17259903/))
+  a guided multiple imputation was used to fill in missing data ([Fraser
+  & Yan, 2007](https://pubmed.ncbi.nlm.nih.gov/17259903/))
   - Five imputed data sets were generated for subsequent analyses (See
     the analysis section for more details)
   - For descriptive analysis, we present results from the first imputed
-    data
+    dataset
 
 ## Incident CVD cases
 
@@ -112,7 +112,7 @@ Egg composite CVD study
   (33.4%)
   - Among these cases, there were 223 incident cases within 6 months
     after AHS-2 enrollment
-  - Similarly, numbers of incident cases within 12, 18, 24 36, and 48
+  - Similarly, numbers of incident cases within 12, 18, 24, 36, and 48
     months are shown below:
 
 | Months after enrollment | N incident CVD cases |
@@ -275,7 +275,7 @@ Egg composite CVD study
   energy-adjusted), and egg x meat interaction, the Cox model includes:
   - Demographics:
     - From Medicare data: Sex, RTI race
-    - From AHS-2 baseline questioannaire: Marital status, educational
+    - From AHS-2 baseline questionnaire: Marital status, educational
       level
   - Lifestyles: BMI category, exercise, sleep hours, smoking status,
     alcohol use
@@ -300,12 +300,12 @@ Egg composite CVD study
     - Chronic kidney diseases
     - Hypothyroidism
     - Cancers (breast, colorectal, prostate, lung, endometrial)
-- The models were run for each imputed data sets, yielding 5 sets of
-  estimated beta coefficients and their variance-covariance matrix
-  - These results were combined according to Rubin’s rule, and the
+- The models were run for each of the imputed data sets, yielding 5 sets
+  of estimated beta coefficients and their variance-covariance matrix
+  - These results were combined according to Rubin’s rules, and the
     pooled estimates of HRs and their 95% confidence intervals were
     produced
-  - All analyses were performed on R version 4.6.1
+  - All analyses were performed in R version 4.6.1
 
 ### Hazard ratios for variables other than egg and meat intake
 
@@ -356,17 +356,497 @@ Egg composite CVD study
 | como_hypoth | Yes | 1.25 (1.13, 1.37) | \<.0001 |
 | como_cancers | Yes | 1.19 (1.06, 1.34) | 0.0028 |
 
-### Hazard ratios with egg x meat interaction
+### Hazard ratios for the joint effect of egg and meat intake
 
-- No egg & no meat as reference
+- One way to illustrate the negative interaction between egg and meat
+  intake is to calculate hazard ratios for each egg intake group at
+  representative levels of meat intake. We chose meat intakes of 0, 10,
+  30, and 100 grams/day and estimated HRs for all egg × meat
+  combinations, using “no egg intake and no meat intake” as the
+  reference group. These HRs reflect the joint risk of egg and meat
+  intake combined, relative to this “healthiest” reference group (no
+  eggs, no meat).
+  - The HRs are shown in the table below
+  - Trend p-values for egg frequency, calculated at each level of meat
+    intake, are shown in the last column of the table
+  - Trend p-values for meat intake, calculated within each egg frequency
+    group, are shown in the last row of the table
 
-| Meat intake (gram/day) | None | 1-3/mo | 1-4/wk | 5+/wk |
-|---:|:---|:---|:---|:---|
-| 0 | 1.00 (1.00, 1.00) | 1.02 (0.96, 1.07) | 0.94 (0.89, 0.99) | 0.94 (0.85, 1.04) |
-| 10 | 1.05 (1.03, 1.07) | 1.03 (0.98, 1.08) | 0.95 (0.91, 1.00) | 0.96 (0.87, 1.06) |
-| 30 | 1.16 (1.10, 1.24) | 1.06 (0.99, 1.13) | 0.99 (0.94, 1.04) | 1.01 (0.92, 1.10) |
-| 100 | 1.66 (1.36, 2.03) | 1.16 (0.99, 1.36) | 1.13 (1.02, 1.25) | 1.19 (1.03, 1.38) |
+<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
 
-### Graphical representation of HRs
+<thead>
+
+<tr>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="4">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Egg frequency
+
+</div>
+
+</th>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+</tr>
+
+<tr>
+
+<th style="text-align:left;">
+
+Meat intake (g/day)
+</th>
+
+<th style="text-align:center;">
+
+None
+</th>
+
+<th style="text-align:center;">
+
+1-3/mo
+</th>
+
+<th style="text-align:center;">
+
+1-4/wk
+</th>
+
+<th style="text-align:center;">
+
+5+/wk
+</th>
+
+<th style="text-align:center;">
+
+P-trend (egg)
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+0
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+1.02 (0.96, 1.07)
+</td>
+
+<td style="text-align:center;">
+
+0.94 (0.89, 0.99)
+</td>
+
+<td style="text-align:center;">
+
+0.94 (0.85, 1.04)
+</td>
+
+<td style="text-align:center;">
+
+0.0065
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+10
+</td>
+
+<td style="text-align:center;">
+
+1.05 (1.03, 1.07)
+</td>
+
+<td style="text-align:center;">
+
+1.03 (0.98, 1.08)
+</td>
+
+<td style="text-align:center;">
+
+0.95 (0.91, 1.00)
+</td>
+
+<td style="text-align:center;">
+
+0.96 (0.87, 1.06)
+</td>
+
+<td style="text-align:center;">
+
+0.0005
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+30
+</td>
+
+<td style="text-align:center;">
+
+1.16 (1.10, 1.24)
+</td>
+
+<td style="text-align:center;">
+
+1.06 (0.99, 1.13)
+</td>
+
+<td style="text-align:center;">
+
+0.99 (0.94, 1.04)
+</td>
+
+<td style="text-align:center;">
+
+1.01 (0.92, 1.10)
+</td>
+
+<td style="text-align:center;">
+
+0.0002
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+100
+</td>
+
+<td style="text-align:center;">
+
+1.66 (1.36, 2.03)
+</td>
+
+<td style="text-align:center;">
+
+1.16 (0.99, 1.36)
+</td>
+
+<td style="text-align:center;">
+
+1.13 (1.02, 1.25)
+</td>
+
+<td style="text-align:center;">
+
+1.19 (1.03, 1.38)
+</td>
+
+<td style="text-align:center;">
+
+0.0205
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+P-trend (meat)
+</td>
+
+<td style="text-align:center;">
+
+\<0.0001
+</td>
+
+<td style="text-align:center;">
+
+0.1268
+</td>
+
+<td style="text-align:center;">
+
+0.0005
+</td>
+
+<td style="text-align:center;">
+
+0.0085
+</td>
+
+<td style="text-align:center;">
+
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+- Shown below is a forest plot depicting the HRs for egg × meat
+  combinations:
 
 ![](summary_files/figure-gfm/egg_meat_intx_HR_forest_plot-1.png)<!-- -->
+
+### Hazard ratios for egg frequency estimated at different meat intake level
+
+- Another way to illustrate the egg x meat interaction, and one that
+  isolates the egg effect more directly, is to calculate hazard ratios
+  for egg frequency at each level of meat intake. For meat intakes of 0,
+  10, 30, and 100 grams/day, we separately estimated HRs for egg
+  frequency groups, using “no egg intake” as the reference at each meat
+  level. These HRs show how the association between egg intake and CVD
+  risk is modified by meat intake
+
+<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<thead>
+
+<tr>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="4">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Egg intake (frequency)
+
+</div>
+
+</th>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+</tr>
+
+<tr>
+
+<th style="text-align:left;">
+
+Meat intake (gram/day)
+</th>
+
+<th style="text-align:center;">
+
+None
+</th>
+
+<th style="text-align:center;">
+
+1-3 times/month
+</th>
+
+<th style="text-align:center;">
+
+1-4 times/week
+</th>
+
+<th style="text-align:center;">
+
+5+ times/week
+</th>
+
+<th style="text-align:center;">
+
+P-trend
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+0
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+1.02 (0.96, 1.07)
+</td>
+
+<td style="text-align:center;">
+
+0.94 (0.89, 0.99)
+</td>
+
+<td style="text-align:center;">
+
+0.94 (0.85, 1.04)
+</td>
+
+<td style="text-align:center;">
+
+0.0065
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+10
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.98 (0.93, 1.03)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.86, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.83, 1.00)
+</td>
+
+<td style="text-align:center;">
+
+0.0005
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+30
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.84, 0.98)
+</td>
+
+<td style="text-align:center;">
+
+0.85 (0.80, 0.91)
+</td>
+
+<td style="text-align:center;">
+
+0.87 (0.79, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.0002
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+100
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.70 (0.55, 0.89)
+</td>
+
+<td style="text-align:center;">
+
+0.68 (0.55, 0.83)
+</td>
+
+<td style="text-align:center;">
+
+0.72 (0.57, 0.90)
+</td>
+
+<td style="text-align:center;">
+
+0.0205
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+![](summary_files/figure-gfm/egg_HR_by_meat_line_plot-1.png)<!-- -->
+
+### Checking the linearity of dietary variables
+
+- To examine whether the associations between meat and other dietary
+  intakes and log hazard were linear, we fit Cox models using restricted
+  cubic splines with 4 knots for each energy-adjusted dietary variable
+  (grams/day). None of the dietary variables showed a significant
+  nonlinear association with incident CVD, except for fruit intake (p =
+  0.0290).
+
+| variable                   | chisq |  df | p_nonlinear |
+|:---------------------------|------:|----:|------------:|
+| meat_gram_ea               |  4.16 |   2 |      0.1249 |
+| fish_gram_ea               |  2.30 |   2 |      0.3161 |
+| alldairy2_gram_ea          |  0.59 |   2 |      0.7458 |
+| totalveg_gram_ea           |  5.78 |   2 |      0.0556 |
+| fruits_gram_ea             |  7.08 |   2 |      0.0290 |
+| refgrains_gram_ea          |  0.03 |   2 |      0.9841 |
+| whole_mixed_grains_gram_ea |  1.34 |   2 |      0.5107 |
+| nutsseeds_gram_ea          |  4.77 |   2 |      0.0920 |
+| legumes_gram_ea            |  0.26 |   2 |      0.8797 |

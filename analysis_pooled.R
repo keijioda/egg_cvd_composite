@@ -1,6 +1,6 @@
 
 # Required libraries
-pacs <- c("tidyverse", "survival", "mice")
+pacs <- c("tidyverse", "survival", "mice", "kableExtra")
 sapply(pacs, require, character.only = TRUE)
 
 
@@ -124,6 +124,11 @@ fit_mod4a_full <- lapply(imputed_data_list, function(d) {
 })
 
 mira_fit_mod4a_full <- as.mira(fit_mod4a_full)
+
+# Pool the results
+pooled <- pool(mira_fit_mod4a_full)
+summary(pooled)
+
 D1(mira_fit_mod4a_full, mira_fit_mod3_full)
 
 # Check for egg x fish interaction -- Not significant p = 0.34  
@@ -270,7 +275,10 @@ hr_table <- expand_grid(
 hr_table
 
 hr_table_wide <- hr_table %>%
-  mutate(cell = sprintf("%.2f (%.2f, %.2f)", HR, lwr, upr)) %>%
+  mutate(
+    is_ref = egg_freq4 == "None" & meat_gramday == 0,
+    cell   = ifelse(is_ref, "1.00 (Ref)", sprintf("%.2f (%.2f, %.2f)", HR, lwr, upr))
+  ) %>%
   select(meat_gramday, egg_freq4, cell) %>%
   pivot_wider(names_from = egg_freq4, values_from = cell)
 
@@ -456,4 +464,273 @@ get_wald_p_pooled(
   coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
   coef_wt    = c(1, 100 / 100)
 )
+
+
+# Incorporate trend p into the table --------------------------------------
+
+# Collect the meat trend p-values, one per egg group (columns)
+p_trend_meat <- c(
+  "None"   = summary(pooled) %>% filter(term == "meat_gram_ea100") %>% pull(p.value),
+  "1-3/mo" = get_wald_p_pooled(fit_mod4a_full,
+                               coef_names = c("meat_gram_ea100", "egg_freq41-3/mo:meat_gram_ea100"),
+                               coef_wt    = c(1, 1)),
+  "1-4/wk" = get_wald_p_pooled(fit_mod4a_full,
+                               coef_names = c("meat_gram_ea100", "egg_freq41-4/wk:meat_gram_ea100"),
+                               coef_wt    = c(1, 1)),
+  "5+/wk"  = get_wald_p_pooled(fit_mod4a_full,
+                               coef_names = c("meat_gram_ea100", "egg_freq45+/wk:meat_gram_ea100"),
+                               coef_wt    = c(1, 1))
+)
+
+# Collect the egg trend p-values, one per meat level (rows)
+# NOTE: interaction term name order is "meat_gram_ea100:as.numeric(egg_freq4)"
+# (meat first) in fit_mod4b_full -- opposite of the egg-first order used
+# in fit_mod4a_full's dummy interactions above.
+p_trend_egg <- c(
+  "0"   = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 0)),
+  "10"  = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 10 / 100)),
+  "30"  = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 30 / 100)),
+  "100" = get_wald_p_pooled(fit_mod4b_full,
+                            coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+                            coef_wt    = c(1, 100 / 100))
+)
+
+# Helper to format p-values consistently
+fmt_p <- function(p) ifelse(p < 0.0001, "<0.0001", sprintf("%.4f", p))
+
+# Add the right-margin column (egg trend p, one per meat row)
+hr_table_wide <- hr_table_wide %>%
+  mutate(`P-trend (egg)` = fmt_p(p_trend_egg[as.character(meat_gramday)]))
+
+# Add the bottom-margin row (meat trend p, one per egg column)
+# Built with setNames() against the actual column names of hr_table_wide,
+# rather than retyped backtick names, so it can't silently mismatch.
+bottom_row <- setNames(
+  as.list(c(
+    NA,
+    fmt_p(p_trend_meat[c("None", "1-3/mo", "1-4/wk", "5+/wk")]),
+    ""
+  )),
+  names(hr_table_wide)
+) %>% as_tibble()
+
+hr_table_final <- hr_table_wide %>%
+  mutate(meat_gramday = as.character(meat_gramday)) %>%
+  bind_rows(bottom_row) %>%
+  mutate(meat_gramday = ifelse(is.na(meat_gramday), "P-trend (meat)", meat_gramday))
+
+hr_table_final
+
+
+# HRs for egg freq at meat intake levels ----------------------------------
+
+# Function to estimate pooled HR for egg with interaction
+intx_hr_egg_pooled <- function(fit_list, egg_main_term, egg_meat_intx_term, meat_gram_value) {
+  p    <- pool_coef_vcov(fit_list)
+  qbar <- p$qbar
+  V    <- p$vcov
+  
+  # Safety check, same pattern as get_wald_p_pooled()
+  needed <- c(egg_main_term, egg_meat_intx_term)
+  missing_terms <- setdiff(needed, names(qbar))
+  if (length(missing_terms) > 0) {
+    stop("Term(s) not found in model coefficients: ",
+         paste(missing_terms, collapse = ", "))
+  }
+  
+  L <- qbar
+  L[] <- 0
+  L[egg_main_term]      <- 1
+  L[egg_meat_intx_term] <- meat_gram_value
+  
+  est <- qbar %*% L
+  se  <- sqrt(t(L) %*% V %*% L)
+  lwr <- est - qnorm(0.975) * se
+  upr <- est + qnorm(0.975) * se
+  c(est, lwr, upr) %>% exp()
+}
+
+egg_labels <- c("1-3/mo", "1-4/wk", "5+/wk")
+egg_main_terms <- c("egg_freq41-3/mo", "egg_freq41-4/wk", "egg_freq45+/wk")
+egg_intx_terms <- c("egg_freq41-3/mo:meat_gram_ea100",
+                    "egg_freq41-4/wk:meat_gram_ea100",
+                    "egg_freq45+/wk:meat_gram_ea100")
+
+# Helper to build the HR table for one meat value, looping over all 3 egg terms
+egg_hr_at_meat <- function(fit_list, meat_gramday) {
+  purrr::pmap_dfr(
+    list(egg_main_terms, egg_intx_terms, egg_labels),
+    function(main_term, intx_term, label) {
+      hr <- intx_hr_egg_pooled(fit_list, main_term, intx_term, meat_gramday / 100)
+      tibble(Meat = paste0(meat_gramday, " g/d"), Egg = label,
+             HR = hr[1], Lower = hr[2], Upper = hr[3])
+    }
+  )
+}
+
+meat_values_gramday <- c(0, 10, 30, 100)
+egg_hr_table <- purrr::map_dfr(meat_values_gramday, ~ egg_hr_at_meat(fit_mod4a_full, .x))
+
+egg_hr_wide <- egg_hr_table %>%
+  mutate(
+    meat_gramday = as.numeric(sub(" g/d", "", Meat)),
+    cell = sprintf("%.2f (%.2f, %.2f)", HR, Lower, Upper)
+  ) %>%
+  select(meat_gramday, Egg, cell) %>%
+  pivot_wider(names_from = Egg, values_from = cell) %>%
+  mutate(None = "1.00 (Ref)") %>%
+  select(meat_gramday, None, `1-3/mo`, `1-4/wk`, `5+/wk`) %>%
+  arrange(meat_gramday) %>%
+  mutate(`P-trend` = fmt_p(p_trend_egg[as.character(meat_gramday)]))
+
+egg_hr_wide
+
+egg_hr_wide %>%
+  kable(
+    col.names = c("Meat intake (gram/day)", "None", "1-3 times/month",
+                  "1-4 times/week", "5+ times/week", "P-trend"),
+    align = "lccccc",
+    caption = "Hazard ratio for egg intake at various meat intake (at each meat intake level, the reference is those who do not eat any eggs)"
+  ) %>%
+  kable_styling(full_width = FALSE) %>%
+  add_header_above(c(" " = 1, "Egg intake (frequency)" = 4, " " = 1))
+
+# Add "None" reference rows (HR = 1, no CI) for each meat level
+none_rows <- tibble(
+  Meat = paste0(c(0, 10, 30, 100), " g/d"),
+  Egg  = "None",
+  HR = 1, Lower = NA, Upper = NA,
+  meat_gramday = c(0, 10, 30, 100)
+)
+
+egg_hr_plot_data <- egg_hr_table %>%
+  mutate(meat_gramday = as.numeric(sub(" g/d", "", Meat))) %>%
+  bind_rows(none_rows) %>%
+  mutate(Egg = factor(Egg, levels = c("None", "1-3/mo", "1-4/wk", "5+/wk")))
+
+p2 <- ggplot(egg_hr_plot_data, aes(x = Egg, y = HR)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey50") +
+  geom_point(aes(shape = Egg == "None", color = Egg == "None"),
+             size = 3, show.legend = FALSE) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2) +
+  scale_shape_manual(values = c("TRUE" = 18, "FALSE" = 16)) +
+  scale_color_manual(values = c("TRUE" = "red", "FALSE" = "black")) +
+  scale_x_discrete(labels = c("None" = "None\n(Ref)", "1-3/mo" = "1-3/mo",
+                              "1-4/wk" = "1-4/wk", "5+/wk" = "5+/wk")) +
+  scale_y_log10(breaks = c(0.6, 0.7, 0.8, 0.9, 1, 1.5, 2)) +
+  facet_wrap(~ factor(meat_gramday, levels = c(0, 10, 30, 100),
+                      labels = paste0("Meat: ", c(0, 10, 30, 100), " g/d")),
+             nrow = 1) +
+  labs(x = "Egg intake frequency", y = "Hazard ratio (log scale)") +
+  theme_minimal() +
+  theme(
+    strip.background = element_rect(fill = "grey85", color = "grey50"),
+    strip.text = element_text(face = "bold")
+  )
+
+pdf("./Results/egg_HR_by_meat_line_plot.pdf", width = 10, height = 3)
+print(p2)
+dev.off()
+
+ggsave("./Results/egg_HR_by_meat_line_plot.png", p2, width = 10, height = 3, dpi = 300)
+
+
+# Checking the linearity on dietary variables -----------------------------
+
+library(rms)
+library(Hmisc)
+
+# --- Step 1: Fix knot locations across all imputed datasets --------------
+# rcs(x, parms = 4) with just a number picks knots from that dataset's own
+# quantiles -- if left as-is, each imputed dataset would get slightly
+# different knot locations, meaning the "same" spline coefficient wouldn't
+# represent the same basis function across fits, and pooling would be
+# invalid. Fix knots explicitly using pooled/combined data across all
+# imputations (stacking them is a reasonable way to get representative
+# quantiles for continuous variables that were only partially imputed).
+
+vars_rcs <- c("meat_gram_ea", "fish_gram_ea", "alldairy2_gram_ea",
+              "totalveg_gram_ea", "fruits_gram_ea", "refgrains_gram_ea",
+              "whole_mixed_grains_gram_ea", "nutsseeds_gram_ea", "legumes_gram_ea")
+
+stacked_data <- bind_rows(imputed_data_list)
+
+knot_list <- lapply(vars_rcs, function(v) {
+  rcspline.eval(stacked_data[[v]], nk = 4, knots.only = TRUE)
+})
+names(knot_list) <- vars_rcs
+
+# --- Step 2: Fit cph with FIXED knots on each imputed dataset ------------
+# Build the rcs terms programmatically with explicit knot locations
+rcs_terms <- sapply(vars_rcs, function(v) {
+  k <- paste(round(knot_list[[v]], 4), collapse = ",")
+  sprintf("rcs(%s, parms = c(%s))", v, k)
+})
+
+rcs_formula_rhs <- paste(rcs_terms, collapse = " + ")
+
+mod3_rcs_fm <- as.formula(paste(
+  "Surv(agein, ageout, inc_CVD) ~ bene_sex_F + rti_race3 + marital + educyou2 +",
+  "bmicat + exercise + sleephrs2 + smokecat6 + alccat + kcal100 +", rcs_formula_rhs
+))
+
+fit_mod3_rcs_list <- lapply(imputed_data_list, function(d) {
+  dd <- datadist(d)
+  options(datadist = "dd")
+  cph(mod3_rcs_fm, data = d, method = "efron", x = TRUE, y = TRUE)
+})
+
+# --- Step 3: Pool coefficients + covariance via Rubin's rules -------------
+# Reuse pool_coef_vcov() from earlier -- works identically for cph fits,
+# since coef() and vcov() are defined the same way for cph objects.
+pooled_rcs <- pool_coef_vcov(fit_mod3_rcs_list)
+qbar <- pooled_rcs$qbar
+V    <- pooled_rcs$vcov
+
+# Check term names -- rms names spline terms with the variable name for the
+# linear component, and variable name with apostrophes (') for each
+# additional nonlinear basis term, e.g. "meat_gram_ea", "meat_gram_ea'",
+# "meat_gram_ea''"
+names(qbar)
+
+# --- Step 4: Multi-df Wald chi-square test for nonlinearity --------------
+# Tests H0: all NONLINEAR spline coefficients for a given variable = 0
+# jointly (this is what anova.cph's "Nonlinear" row does for a single fit;
+# here we replicate it using the pooled coefficient vector + covariance).
+wald_chisq_pooled <- function(qbar, V, coef_names) {
+  L <- matrix(0, nrow = length(coef_names), ncol = length(qbar),
+              dimnames = list(coef_names, names(qbar)))
+  for (i in seq_along(coef_names)) L[i, coef_names[i]] <- 1
+  
+  Lq   <- L %*% qbar
+  LVLt <- L %*% V %*% t(L)
+  chisq <- as.numeric(t(Lq) %*% solve(LVLt) %*% Lq)
+  df    <- length(coef_names)
+  p     <- pchisq(chisq, df = df, lower.tail = FALSE)
+  c(chisq = chisq, df = df, p_nonlinear = p)
+}
+
+# Nonlinear terms for a given rcs variable are all basis columns EXCEPT the
+# first (linear) one -- with 4 knots, rcs() produces 3 basis columns total:
+# 1 linear + 2 nonlinear. Term names follow the pattern "var", "var'", "var''"
+nonlinear_terms <- function(varname, all_names) {
+  grep(paste0("^", varname, "'"), all_names, value = TRUE)
+}
+
+# --- Step 5: Run nonlinearity test for each rcs variable ------------------
+nonlin_results <- lapply(vars_rcs, function(v) {
+  nl_terms <- nonlinear_terms(v, names(qbar))
+  res <- wald_chisq_pooled(qbar, V, nl_terms)
+  data.frame(variable = v, chisq = res["chisq"], df = res["df"], p_nonlinear = res["p_nonlinear"])
+}) %>% bind_rows()
+
+nonlin_results %>% 
+  as_tibble() %>% 
+  knitr::kable(digits = c(0, 2, 0, 4))
 
