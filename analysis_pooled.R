@@ -7,6 +7,7 @@ sapply(pacs, require, character.only = TRUE)
 # Read the list of imputed data -------------------------------------------
 
 imputed_data_list <- readRDS("./Data/imputed_data_list.rds")
+# imputed_data_list <- readRDS("./Data/imputed_data_list_prev_2yrs.rds")
 
 
 # Cox models --------------------------------------------------------------
@@ -163,8 +164,6 @@ D1(mira_fit_mod4d_full, mira_fit_mod3_full)
 
 
 # HRs for other variables -------------------------------------------------
-
-mod4a_full_fm
 
 # Extract variable names from the formula (preserve model order)
 var_names_ordered <- all.vars(mod4a_full_fm)[-(1:3)] %>%   # drop agein, ageout, inc_CVD
@@ -483,9 +482,6 @@ p_trend_meat <- c(
 )
 
 # Collect the egg trend p-values, one per meat level (rows)
-# NOTE: interaction term name order is "meat_gram_ea100:as.numeric(egg_freq4)"
-# (meat first) in fit_mod4b_full -- opposite of the egg-first order used
-# in fit_mod4a_full's dummy interactions above.
 p_trend_egg <- c(
   "0"   = get_wald_p_pooled(fit_mod4b_full,
                             coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
@@ -509,8 +505,6 @@ hr_table_wide <- hr_table_wide %>%
   mutate(`P-trend (egg)` = fmt_p(p_trend_egg[as.character(meat_gramday)]))
 
 # Add the bottom-margin row (meat trend p, one per egg column)
-# Built with setNames() against the actual column names of hr_table_wide,
-# rather than retyped backtick names, so it can't silently mismatch.
 bottom_row <- setNames(
   as.list(c(
     NA,
@@ -599,7 +593,7 @@ egg_hr_wide %>%
     caption = "Hazard ratio for egg intake at various meat intake (at each meat intake level, the reference is those who do not eat any eggs)"
   ) %>%
   kable_styling(full_width = FALSE) %>%
-  add_header_above(c(" " = 1, "Egg intake (frequency)" = 4, " " = 1))
+  add_header_above(c(" " = 1, "Egg frequency" = 4, " " = 1))
 
 # Add "None" reference rows (HR = 1, no CI) for each meat level
 none_rows <- tibble(
@@ -641,20 +635,209 @@ dev.off()
 ggsave("./Results/egg_HR_by_meat_line_plot.png", p2, width = 10, height = 3, dpi = 300)
 
 
+# Substitution analysis ---------------------------------------------------
+
+fit_mod4a_full %>% pool() %>% summary()
+
+# Function to extract betas and vcov(beta)
+get_pooled_estimates <- function(fit_mira) {
+  pooled_summary <- fit_mira %>% pool() %>% summary(conf.int = TRUE)
+  bhat <- pooled_summary$estimate
+  names(bhat) <- pooled_summary$term
+  
+  fit_analyses <- fit_mira$analyses
+  m <- length(fit_analyses)
+  qhats <- sapply(fit_analyses, coef)
+  qbar <- rowMeans(qhats)
+  vw <- Reduce("+", lapply(fit_analyses, vcov)) / m
+  vb <- (1 / (m - 1)) * (qhats - qbar) %*% t(qhats - qbar)
+  vt <- vw + (1 + 1 / m) * vb
+  dimnames(vt) <- list(names(bhat), names(bhat))
+  
+  list(bhat = bhat, vt = vt)
+}
+
+est <- get_pooled_estimates(fit_mod4a_full %>% as.mira())
+bhat <- est$bhat
+vt   <- est$vt
+
+# loc    : character vector of term names entering the linear combination
+# weight : numeric vector of same length, the multiplier for each term
+get_est_beta_substitute <- function(bhat, vt, loc, weight) {
+  a <- weight
+  b <- bhat[loc]
+  est_cbeta <- sum(a * b)
+  
+  v <- vt[loc, loc]
+  subs_b_var <- as.numeric(t(a) %*% v %*% a)
+  
+  ci <- est_cbeta + qnorm(c(.025, .975)) * sqrt(subs_b_var)
+  out <- exp(c(est = est_cbeta, lower = ci[1], upper = ci[2]))
+  return(out)
+}
+
+# Evaluate at a grid of meat levels
+meat_grid <- c(0, 10, 30, 100) / 100
+
+# Names for egg terms and their interaction with meat
+egg_terms <- c("egg_freq41-3/mo", "egg_freq41-4/wk", "egg_freq45+/wk")
+int_terms <- paste0(egg_terms, ":meat_gram_ea100")
+
+## Substitution with legumes ----------------------------------------------
+
+# calorie-equivalent for each category's midpoint frequency (eggs/month -> legume g/day)
+egg_freq <- c(2/30, 2.5/7, 1) 
+gram_equivs <- 60 * egg_freq / 100
+
+all_results <- lapply(seq_along(egg_terms), function(i) {
+  loc <- c(egg_terms[i], int_terms[i], "legumes_gram_ea100")
+  t(sapply(meat_grid, function(m_val) {
+    weight <- c(1, m_val, -gram_equivs[i])
+    get_est_beta_substitute(bhat, vt, loc, weight)
+  }))
+})
+names(all_results) <- egg_terms
+
+# Format "est (lower, upper)" strings, 2 decimals
+fmt_hr <- function(mat) {
+  sprintf("%.2f (%.2f, %.2f)", mat[, "est"], mat[, "lower"], mat[, "upper"])
+}
+
+# convert to actual grams/day for the table
+meat_gramday <- meat_grid * 100
+
+# Wide format
+subs_egg_for_legumes_hr_wide <- tibble(
+  meat_gramday = meat_gramday,
+  None = "1.00 (Ref)",
+  `1-3/mo` = fmt_hr(all_results[["egg_freq41-3/mo"]]),
+  `1-4/wk` = fmt_hr(all_results[["egg_freq41-4/wk"]]),
+  `5+/wk`  = fmt_hr(all_results[["egg_freq45+/wk"]])
+)
+
+subs_egg_for_legumes_hr_wide
+
+
+## Substitution with nuts/seeds -------------------------------------------
+
+# calorie-equivalent for each category's midpoint frequency (eggs/month -> nuts g/day)
+egg_freq <- c(2/30, 2.5/7, 1) 
+gram_equivs <- 14 * egg_freq / 100
+
+all_results <- lapply(seq_along(egg_terms), function(i) {
+  loc <- c(egg_terms[i], int_terms[i], "nutsseeds_gram_ea100")
+  t(sapply(meat_grid, function(m_val) {
+    weight <- c(1, m_val, -gram_equivs[i])
+    get_est_beta_substitute(bhat, vt, loc, weight)
+  }))
+})
+names(all_results) <- egg_terms
+
+# Format "est (lower, upper)" strings, 2 decimals
+fmt_hr <- function(mat) {
+  sprintf("%.2f (%.2f, %.2f)", mat[, "est"], mat[, "lower"], mat[, "upper"])
+}
+
+# convert to actual grams/day for the table
+meat_gramday <- meat_grid * 100
+
+# Wide format
+subs_egg_for_nuts_hr_wide <- tibble(
+  meat_gramday = meat_gramday,
+  None = "1.00 (Ref)",
+  `1-3/mo` = fmt_hr(all_results[["egg_freq41-3/mo"]]),
+  `1-4/wk` = fmt_hr(all_results[["egg_freq41-4/wk"]]),
+  `5+/wk`  = fmt_hr(all_results[["egg_freq45+/wk"]])
+)
+
+subs_egg_for_nuts_hr_wide
+
+
+# Checking for PH assumptions ---------------------------------------------
+
+# Using the 1st imputed data
+imp1 <- imputed_data_list[[1]]
+
+cox_imp1 <- coxph(
+  formula(fit_mod4a_full[[1]]),
+  data = imp1,
+  model = TRUE
+)
+
+# zph p-values are too sensitive when you have a large sample...
+zph_result <- cox.zph(cox_imp1)
+zph_result
+
+# Scatter plot of the scaled Schoenfeld residuals for meat
+# Ignore some outliers
+# Should scatter randomly around zero with no trend over time
+plot(
+  zph_result, 
+  var = "meat_gram_ea100", 
+  ylim = c(-20, 20),
+  col = c("gray70", "red"), 
+  lwd = 3
+  )
+
+# Scatter plot of the scaled Schoenfeld residuals for egg
+plot(
+  zph_result, 
+  var = "egg_freq4",
+  col = c("gray70", "red"), 
+  lwd = 3
+)
+
+pdf("./Results/cox_zph_all_plots.pdf", width = 8, height = 6)
+  plot(zph_result, col = c("gray70", "red"), lwd = 2)
+dev.off()
+
+# Using ggplot
+plot_zph_gg <- function(zph_obj, term, ylim = NULL, point_alpha = 0.3, 
+                        point_size = 1, spline_df = 4) {
+  time_vals <- zph_obj$x
+  resid_vals <- zph_obj$y[, term]
+  
+  df <- data.frame(time = time_vals, resid = resid_vals)
+  
+  p <- ggplot(df, aes(x = time, y = resid)) +
+    geom_point(alpha = point_alpha, size = point_size, color = "gray30") +
+    geom_smooth(
+      method = "loess",
+      se = TRUE,
+      color = "red",
+      fill = "red",
+      alpha = 0.3,        # transparency of the CI ribbon
+      linewidth = 1
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+    labs(
+      x = "Time",
+      y = paste("Beta(t) for", term),
+      title = term
+    ) +
+    theme_minimal()
+  
+  if (!is.null(ylim)) {
+    p <- p + coord_cartesian(ylim = ylim)
+  }
+  
+  return(p)
+}
+
+# Build individual panels
+p_meat <- plot_zph_gg(zph_result, "meat_gram_ea100", ylim = c(-20, 20))
+p_egg  <- plot_zph_gg(zph_result, "egg_freq4")
+
+# Combine side by side with patchwork
+library(patchwork)
+p_meat + p_egg
+
 # Checking the linearity on dietary variables -----------------------------
 
 library(rms)
 library(Hmisc)
 
 # --- Step 1: Fix knot locations across all imputed datasets --------------
-# rcs(x, parms = 4) with just a number picks knots from that dataset's own
-# quantiles -- if left as-is, each imputed dataset would get slightly
-# different knot locations, meaning the "same" spline coefficient wouldn't
-# represent the same basis function across fits, and pooling would be
-# invalid. Fix knots explicitly using pooled/combined data across all
-# imputations (stacking them is a reasonable way to get representative
-# quantiles for continuous variables that were only partially imputed).
-
 vars_rcs <- c("meat_gram_ea", "fish_gram_ea", "alldairy2_gram_ea",
               "totalveg_gram_ea", "fruits_gram_ea", "refgrains_gram_ea",
               "whole_mixed_grains_gram_ea", "nutsseeds_gram_ea", "legumes_gram_ea")
@@ -687,22 +870,11 @@ fit_mod3_rcs_list <- lapply(imputed_data_list, function(d) {
 })
 
 # --- Step 3: Pool coefficients + covariance via Rubin's rules -------------
-# Reuse pool_coef_vcov() from earlier -- works identically for cph fits,
-# since coef() and vcov() are defined the same way for cph objects.
 pooled_rcs <- pool_coef_vcov(fit_mod3_rcs_list)
 qbar <- pooled_rcs$qbar
 V    <- pooled_rcs$vcov
 
-# Check term names -- rms names spline terms with the variable name for the
-# linear component, and variable name with apostrophes (') for each
-# additional nonlinear basis term, e.g. "meat_gram_ea", "meat_gram_ea'",
-# "meat_gram_ea''"
-names(qbar)
-
 # --- Step 4: Multi-df Wald chi-square test for nonlinearity --------------
-# Tests H0: all NONLINEAR spline coefficients for a given variable = 0
-# jointly (this is what anova.cph's "Nonlinear" row does for a single fit;
-# here we replicate it using the pooled coefficient vector + covariance).
 wald_chisq_pooled <- function(qbar, V, coef_names) {
   L <- matrix(0, nrow = length(coef_names), ncol = length(qbar),
               dimnames = list(coef_names, names(qbar)))
@@ -733,4 +905,3 @@ nonlin_results <- lapply(vars_rcs, function(v) {
 nonlin_results %>% 
   as_tibble() %>% 
   knitr::kable(digits = c(0, 2, 0, 4))
-

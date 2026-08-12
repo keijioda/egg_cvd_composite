@@ -256,6 +256,7 @@ Egg composite CVD study
 
 - To examine risk factors associated with incident CVD, we employed the
   Cox proportional hazards model with attained age as the time scale
+
   - Age at entry was calculated based on the return date of AHS-2
     questionnaire
   - Those who died during the follow-up were censored at the date of
@@ -271,8 +272,10 @@ Egg composite CVD study
       groups (see the “Descriptive table” section)
   - For meat and other food group variables, their intake was calculated
     in gram per day and then energy-adjusted by the residual method
+
 - Other than egg frequency (4 levels), meat intake (gram/day,
   energy-adjusted), and egg x meat interaction, the Cox model includes:
+
   - Demographics:
     - From Medicare data: Sex, RTI race
     - From AHS-2 baseline questionnaire: Marital status, educational
@@ -300,12 +303,20 @@ Egg composite CVD study
     - Chronic kidney diseases
     - Hypothyroidism
     - Cancers (breast, colorectal, prostate, lung, endometrial)
+
 - The models were run for each of the imputed data sets, yielding 5 sets
   of estimated beta coefficients and their variance-covariance matrix
+
   - These results were combined according to Rubin’s rules, and the
     pooled estimates of HRs and their 95% confidence intervals were
     produced
-  - All analyses were performed in R version 4.6.1
+
+- The proportional hazards assumption was assessed by plotting scaled
+  Schoenfeld residuals against time for each covariate. The residuals
+  scattered randomly around zero with no discernible trend over time,
+  supporting the assumption (see results below)
+
+- All analyses were performed in R version 4.6.1
 
 ### Hazard ratios for variables other than egg and meat intake
 
@@ -638,7 +649,7 @@ P-trend (meat)
 
 <div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
 
-Egg intake (frequency)
+Egg frequency
 
 </div>
 
@@ -830,6 +841,378 @@ P-trend
 
 ![](summary_files/figure-gfm/egg_HR_by_meat_line_plot-1.png)<!-- -->
 
+### Substitution analysis
+
+- Substitution analysis was conducted to estimate the isocaloric effect
+  of replacing another dietary component with egg intake, holding total
+  energy intake constant, rather than assuming increased egg consumption
+  occurs independent of overall diet composition
+  - Substitutions were modeled for two different comparator foods,
+    legumes and nuts/seeds, to assess whether the egg–meat interaction
+    on CVD risk was sensitive to the specific food displaced
+  - The substitution amount for each comparator food was defined as the
+    quantity isocaloric with one egg, corresponding to approximately 60
+    g of legumes and 14 g of nuts/seeds based on their respective energy
+    densities
+    - These gram-equivalents were then scaled by the frequency of egg
+      consumption within each exposure category to obtain a daily
+      gram-equivalent quantity of the comparator food displaced.
+- Substitution HRs for egg intake across levels of meat consumption were
+  similar regardless of the specific comparator food (legumes or
+  nuts/seeds), suggesting that the observed interaction between egg and
+  meat intake on CVD risk is not sensitive to the choice of displaced
+  dietary component.
+
+<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<thead>
+
+<tr>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="4">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Egg frequency (substituted for legumes)
+
+</div>
+
+</th>
+
+</tr>
+
+<tr>
+
+<th style="text-align:left;">
+
+Meat intake (g/day)
+</th>
+
+<th style="text-align:center;">
+
+None
+</th>
+
+<th style="text-align:center;">
+
+1-3/mo
+</th>
+
+<th style="text-align:center;">
+
+1-4/wk
+</th>
+
+<th style="text-align:center;">
+
+5+/wk
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+0
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+1.02 (0.96, 1.07)
+</td>
+
+<td style="text-align:center;">
+
+0.93 (0.89, 0.98)
+</td>
+
+<td style="text-align:center;">
+
+0.93 (0.84, 1.03)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+10
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.98 (0.93, 1.03)
+</td>
+
+<td style="text-align:center;">
+
+0.90 (0.86, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.90 (0.82, 0.99)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+30
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.84, 0.98)
+</td>
+
+<td style="text-align:center;">
+
+0.85 (0.79, 0.91)
+</td>
+
+<td style="text-align:center;">
+
+0.85 (0.78, 0.94)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+100
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.70 (0.55, 0.89)
+</td>
+
+<td style="text-align:center;">
+
+0.68 (0.55, 0.83)
+</td>
+
+<td style="text-align:center;">
+
+0.71 (0.56, 0.89)
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<thead>
+
+<tr>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="4">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Egg frequency (substituted for nuts/seeds)
+
+</div>
+
+</th>
+
+</tr>
+
+<tr>
+
+<th style="text-align:left;">
+
+Meat intake (g/day)
+</th>
+
+<th style="text-align:center;">
+
+None
+</th>
+
+<th style="text-align:center;">
+
+1-3/mo
+</th>
+
+<th style="text-align:center;">
+
+1-4/wk
+</th>
+
+<th style="text-align:center;">
+
+5+/wk
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+0
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+1.02 (0.96, 1.07)
+</td>
+
+<td style="text-align:center;">
+
+0.94 (0.90, 0.99)
+</td>
+
+<td style="text-align:center;">
+
+0.95 (0.86, 1.06)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+10
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.98 (0.93, 1.03)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.87, 0.96)
+</td>
+
+<td style="text-align:center;">
+
+0.93 (0.84, 1.02)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+30
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.84, 0.98)
+</td>
+
+<td style="text-align:center;">
+
+0.86 (0.80, 0.92)
+</td>
+
+<td style="text-align:center;">
+
+0.88 (0.80, 0.97)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+100
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.70 (0.55, 0.89)
+</td>
+
+<td style="text-align:center;">
+
+0.68 (0.56, 0.84)
+</td>
+
+<td style="text-align:center;">
+
+0.73 (0.58, 0.92)
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
 ### Checking the linearity of dietary variables
 
 - To examine whether the associations between meat and other dietary
@@ -850,3 +1233,12 @@ P-trend
 | whole_mixed_grains_gram_ea |  1.34 |   2 |      0.5107 |
 | nutsseeds_gram_ea          |  4.77 |   2 |      0.0920 |
 | legumes_gram_ea            |  0.26 |   2 |      0.8797 |
+
+### Checking the proportional hazards assumption
+
+- The proportional hazards assumption was assessed by plotting scaled
+  Schoenfeld residuals against time for each covariate. The residuals
+  scattered randomly around zero with no discernible trend over time,
+  supporting the assumption
+
+![](summary_files/figure-gfm/cox_ph_assumption_check-1.png)<!-- -->

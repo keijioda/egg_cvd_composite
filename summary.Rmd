@@ -5,10 +5,10 @@ always_allow_html: true
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 
 # Required packages
-pacs <- c("tidyverse", "tableone", "survival", "mice", "kableExtra")
+pacs <- c("tidyverse", "tableone", "survival", "mice", "kableExtra", "patchwork")
 sapply(pacs, require, character.only = TRUE)
 
 # Read the list of imputed data -------------------------------------------
@@ -265,7 +265,10 @@ mi1 %>%
 
 * The models were run for each of the imputed data sets, yielding 5 sets of estimated beta coefficients and their variance-covariance matrix
   * These results were combined according to Rubin's rules, and the pooled estimates of HRs and their 95% confidence intervals were produced
-  * All analyses were performed in R version 4.6.1
+  
+* The proportional hazards assumption was assessed by plotting scaled Schoenfeld residuals against time for each covariate. The residuals scattered randomly around zero with no discernible trend over time, supporting the assumption (see results below)
+
+* All analyses were performed in R version 4.6.1
 
 ### Hazard ratios for variables other than egg and meat intake
 
@@ -536,9 +539,6 @@ hr_table_final <- hr_table_wide %>%
   bind_rows(bottom_row) %>%
   mutate(meat_gramday = ifelse(is.na(meat_gramday), "P-trend (meat)", meat_gramday))
 
-# hr_table_final %>% 
-#   knitr::kable()
-
 hr_table_final %>%
   rename(`Meat intake (g/day)` = meat_gramday) %>%
   kable(
@@ -700,7 +700,7 @@ egg_hr_wide %>%
     align = "lccccc"
   ) %>%
   kable_styling(full_width = FALSE) %>%
-  add_header_above(c(" " = 1, "Egg intake (frequency)" = 4, " " = 1))
+  add_header_above(c(" " = 1, "Egg frequency" = 4, " " = 1))
 
 ```
 
@@ -738,6 +738,153 @@ ggplot(egg_hr_plot_data, aes(x = Egg, y = HR)) +
     strip.background = element_rect(fill = "grey85", color = "grey50"),
     strip.text = element_text(face = "bold")
   )
+```
+
+
+### Substitution analysis
+
+* Substitution analysis was conducted to estimate the isocaloric effect of replacing another dietary component with egg intake, holding total energy intake constant, rather than assuming increased egg consumption occurs independent of overall diet composition
+  * Substitutions were modeled for two different comparator foods, legumes and nuts/seeds, to assess whether the egg–meat interaction on CVD risk was sensitive to the specific food displaced
+  * The substitution amount for each comparator food was defined as the quantity isocaloric with one egg, corresponding to approximately 60 g of legumes and 14 g of nuts/seeds based on their respective energy densities
+    * These gram-equivalents were then scaled by the frequency of egg consumption within each exposure category to obtain a daily gram-equivalent quantity of the comparator food displaced.
+
+* Substitution HRs for egg intake across levels of meat consumption were similar regardless of the specific comparator food (legumes or nuts/seeds), suggesting that the observed interaction between egg and meat intake on CVD risk is not sensitive to the choice of displaced dietary component.
+
+
+```{r substitute_egg_with_legume, echo = FALSE}
+
+# Substitution analysis ---------------------------------------------------
+
+# Function to extract betas and vcov(beta)
+get_pooled_estimates <- function(fit_mira) {
+  pooled_summary <- fit_mira %>% pool() %>% summary(conf.int = TRUE)
+  bhat <- pooled_summary$estimate
+  names(bhat) <- pooled_summary$term
+  
+  fit_analyses <- fit_mira$analyses
+  m <- length(fit_analyses)
+  qhats <- sapply(fit_analyses, coef)
+  qbar <- rowMeans(qhats)
+  vw <- Reduce("+", lapply(fit_analyses, vcov)) / m
+  vb <- (1 / (m - 1)) * (qhats - qbar) %*% t(qhats - qbar)
+  vt <- vw + (1 + 1 / m) * vb
+  dimnames(vt) <- list(names(bhat), names(bhat))
+  
+  list(bhat = bhat, vt = vt)
+}
+
+est <- get_pooled_estimates(fit_mod4a_full %>% as.mira())
+bhat <- est$bhat
+vt   <- est$vt
+
+# loc    : character vector of term names entering the linear combination
+# weight : numeric vector of same length, the multiplier for each term
+get_est_beta_substitute <- function(bhat, vt, loc, weight) {
+  a <- weight
+  b <- bhat[loc]
+  est_cbeta <- sum(a * b)
+  
+  v <- vt[loc, loc]
+  subs_b_var <- as.numeric(t(a) %*% v %*% a)
+  
+  ci <- est_cbeta + qnorm(c(.025, .975)) * sqrt(subs_b_var)
+  out <- exp(c(est = est_cbeta, lower = ci[1], upper = ci[2]))
+  return(out)
+}
+
+# Evaluate at a grid of meat levels
+meat_grid <- c(0, 10, 30, 100) / 100
+
+# Names for egg terms and their interaction with meat
+egg_terms <- c("egg_freq41-3/mo", "egg_freq41-4/wk", "egg_freq45+/wk")
+int_terms <- paste0(egg_terms, ":meat_gram_ea100")
+
+## Substitution with legumes ----------------------------------------------
+
+# calorie-equivalent for each category's midpoint frequency (eggs/month -> legume g/day)
+egg_freq <- c(2/30, 2.5/7, 1) 
+gram_equivs <- 60 * egg_freq / 100
+
+all_results <- lapply(seq_along(egg_terms), function(i) {
+  loc <- c(egg_terms[i], int_terms[i], "legumes_gram_ea100")
+  t(sapply(meat_grid, function(m_val) {
+    weight <- c(1, m_val, -gram_equivs[i])
+    get_est_beta_substitute(bhat, vt, loc, weight)
+  }))
+})
+names(all_results) <- egg_terms
+
+# Format "est (lower, upper)" strings, 2 decimals
+fmt_hr <- function(mat) {
+  sprintf("%.2f (%.2f, %.2f)", mat[, "est"], mat[, "lower"], mat[, "upper"])
+}
+
+# convert to actual grams/day for the table
+meat_gramday <- meat_grid * 100
+
+# Wide format
+subs_egg_for_legumes_hr_wide <- tibble(
+  meat_gramday = meat_gramday,
+  None = "1.00 (Ref)",
+  `1-3/mo` = fmt_hr(all_results[["egg_freq41-3/mo"]]),
+  `1-4/wk` = fmt_hr(all_results[["egg_freq41-4/wk"]]),
+  `5+/wk`  = fmt_hr(all_results[["egg_freq45+/wk"]])
+)
+
+subs_egg_for_legumes_hr_wide %>% 
+  rename(`Meat intake (g/day)` = meat_gramday) %>%
+  kable(
+    col.names = c("Meat intake (g/day)", "None", "1-3/mo", "1-4/wk", "5+/wk"),
+    align = "lcccc"
+  ) %>%
+  kable_styling(full_width = FALSE) %>%
+  add_header_above(c(" " = 1, "Egg frequency (substituted for legumes)" = 4))
+
+```
+
+```{r substitute_egg_with_nuts, echo = FALSE}
+
+## Substitution with nuts/seeds -------------------------------------------
+
+# calorie-equivalent for each category's midpoint frequency (eggs/month -> nuts g/day)
+egg_freq <- c(2/30, 2.5/7, 1) 
+gram_equivs <- 14 * egg_freq / 100
+
+all_results <- lapply(seq_along(egg_terms), function(i) {
+  loc <- c(egg_terms[i], int_terms[i], "nutsseeds_gram_ea100")
+  t(sapply(meat_grid, function(m_val) {
+    weight <- c(1, m_val, -gram_equivs[i])
+    get_est_beta_substitute(bhat, vt, loc, weight)
+  }))
+})
+names(all_results) <- egg_terms
+
+# Format "est (lower, upper)" strings, 2 decimals
+fmt_hr <- function(mat) {
+  sprintf("%.2f (%.2f, %.2f)", mat[, "est"], mat[, "lower"], mat[, "upper"])
+}
+
+# convert to actual grams/day for the table
+meat_gramday <- meat_grid * 100
+
+# Wide format
+subs_egg_for_nuts_hr_wide <- tibble(
+  meat_gramday = meat_gramday,
+  None = "1.00 (Ref)",
+  `1-3/mo` = fmt_hr(all_results[["egg_freq41-3/mo"]]),
+  `1-4/wk` = fmt_hr(all_results[["egg_freq41-4/wk"]]),
+  `5+/wk`  = fmt_hr(all_results[["egg_freq45+/wk"]])
+)
+
+subs_egg_for_nuts_hr_wide %>% 
+  rename(`Meat intake (g/day)` = meat_gramday) %>%
+  kable(
+    col.names = c("Meat intake (g/day)", "None", "1-3/mo", "1-4/wk", "5+/wk"),
+    align = "lcccc"
+  ) %>%
+  kable_styling(full_width = FALSE) %>%
+  add_header_above(c(" " = 1, "Egg frequency (substituted for nuts/seeds)" = 4))
+
 ```
 
 ### Checking the linearity of dietary variables
@@ -822,6 +969,68 @@ nonlin_results <- lapply(vars_rcs, function(v) {
 nonlin_results %>% 
   as_tibble() %>% 
   knitr::kable(digits = c(0, 2, 0, 4))
+
+```
+
+### Checking the proportional hazards assumption
+
+* The proportional hazards assumption was assessed by plotting scaled Schoenfeld residuals against time for each covariate. The residuals scattered randomly around zero with no discernible trend over time, supporting the assumption
+
+```{r cox_ph_assumption_check, echo = FALSE, message = FALSE, fig.height = 5, fig.width = 10}
+
+# Checking for PH assumptions ---------------------------------------------
+
+# Using the 1st imputed data
+imp1 <- imputed_data_list[[1]]
+
+cox_imp1 <- coxph(
+  formula(fit_mod4a_full[[1]]),
+  data = imp1,
+  model = TRUE
+)
+
+# zph p-values are too sensitive when you have a large sample...
+zph_result <- cox.zph(cox_imp1)
+
+# Scatter plot of the scaled Schoenfeld residuals 
+plot_zph_gg <- function(zph_obj, term, ylim = NULL, point_alpha = 0.3, 
+                        point_size = 1, spline_df = 4) {
+  time_vals <- zph_obj$x
+  resid_vals <- zph_obj$y[, term]
+  
+  df <- data.frame(time = time_vals, resid = resid_vals)
+  
+  p <- ggplot(df, aes(x = time, y = resid)) +
+    geom_point(alpha = point_alpha, size = point_size, color = "gray30") +
+    geom_smooth(
+      method = "loess",
+      se = TRUE,
+      color = "red",
+      fill = "red",
+      alpha = 0.3,        # transparency of the CI ribbon
+      linewidth = 1
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+    labs(
+      x = "Time",
+      y = paste("Beta(t) for", term),
+      title = term
+    ) +
+    theme_minimal()
+  
+  if (!is.null(ylim)) {
+    p <- p + coord_cartesian(ylim = ylim)
+  }
+  
+  return(p)
+}
+
+# Build individual panels
+p_meat <- plot_zph_gg(zph_result, "meat_gram_ea100", ylim = c(-20, 20))
+p_egg  <- plot_zph_gg(zph_result, "egg_freq4")
+
+# Combine side by side with patchwork
+p_meat + p_egg
 
 ```
 

@@ -285,6 +285,7 @@ build_analytic_dataset <- function(imp_df) {
     mutate(DateDiff = interval(qreturndate, CVD_EVER),
            DateDiff_days = as.numeric(DateDiff, 'days'))
 
+  # Prevalent cases: Diagnosed on enrollment or earlier
   prev_cvd <- cvd_diag_date %>%
     filter(DateDiff_days <= 0) %>%
     select(analysisid)
@@ -400,38 +401,3 @@ processed_list <- lapply(imputed_data, build_analytic_dataset)
 sapply(processed_list, nrow)
 
 saveRDS(processed_list, "./Data/imputed_data_list.rds")
-
-# # Long-format version for storage/inspection (each imputation keeps its own
-# # subjects/N; .imp simply tags which imputation a row came from -- this is
-# # NOT the mice .imp/.id structure required by as.mids(), just a bookkeeping
-# # column)
-# long_data <- purrr::imap_dfr(processed_list, ~ mutate(.x, .imp = .y, .before = 1))
-# 
-# # Fit the Cox model separately on each of the 5 completed datasets ---------
-# # Adjust the formula to whatever your actual model specification is.
-# fit_list <- lapply(processed_list, function(d) {
-#   coxph(
-#     Surv(agein, ageout, inc_CVD) ~ egg_freq + kcal100 + bmicat + bene_sex_F + agecat,
-#     data = d
-#   )
-# })
-# 
-# # Wrap the list of 5 fitted models into a `mira` object --------------------
-# # as.mira() only needs a list of fitted model objects of the same class/
-# # formula -- it does NOT require the underlying data to share a common
-# # sample size or subject set, so this sidesteps the congeniality issue
-# # that blocked the mids approach.
-# mira_fit <- as.mira(fit_list)
-# 
-# # From here you can pool with mice's built-in Rubin's-rules pooling...
-# pooled <- pool(mira_fit)
-# summary(pooled)
-# 
-# # ...or, since you want to pool manually yourself, the raw ingredients are
-# # sitting in fit_list / mira_fit for each imputation:
-# #   - point estimates:      lapply(fit_list, coef)
-# #   - variance-covariance:  lapply(fit_list, vcov)
-# #   - N per imputation:     sapply(processed_list, nrow)
-# # which is everything Rubin's rules need (within-imputation variance from
-# # vcov(), between-imputation variance from the spread of coef() across the
-# # list, combined per the formulas from our earlier discussion).
