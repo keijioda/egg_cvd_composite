@@ -323,6 +323,9 @@ fit_mod4a_full <- lapply(imputed_data_list, function(d) {
 
 mira_fit_mod4a_full <- as.mira(fit_mod4a_full)
 
+# Keep this for checking PH assumption
+fit_mod4a_full_PH <- fit_mod4a_full
+
 # HRs for other variables -------------------------------------------------
 
 # Extract variable names from the formula (preserve model order)
@@ -1117,7 +1120,7 @@ nonlin_results %>%
 imp1 <- imputed_data_list[[1]]
 
 cox_imp1 <- coxph(
-  formula(fit_mod4a_full[[1]]),
+  formula(fit_mod4a_full_PH[[1]]),
   data = imp1,
   model = TRUE
 )

@@ -1467,9 +1467,4 @@ P-trend
   scattered randomly around zero with no discernible trend over time,
   supporting the assumption
 
-<!-- -->
-
-    ## Warning in Surv(agein + 2, ageout, inc_CVD): Stop time must be > start time, NA
-    ## created
-
 ![](summary_files/figure-gfm/cox_ph_assumption_check-1.png)<!-- -->
