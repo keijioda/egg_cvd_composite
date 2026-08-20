@@ -320,8 +320,12 @@ Egg composite CVD study
 
 ### Hazard ratios for variables other than egg and meat intake
 
+- In the Cox model, the interaction between egg frequency and meat
+  intake was statistically significant (p = 0.018)
+
 - See the estimated hazard ratios for variables other than egg and meat
   intake
+
   - Note that the reference levels are omitted in the table below
 
 | Variable | Level | HR | p.value |
@@ -841,7 +845,7 @@ P-trend
 
 ![](summary_files/figure-gfm/egg_HR_by_meat_line_plot-1.png)<!-- -->
 
-### Substitution analysis
+## Substitution analysis
 
 - Substitution analysis was conducted to estimate the isocaloric effect
   of replacing another dietary component with egg intake, holding total
@@ -1213,6 +1217,228 @@ None
 
 </table>
 
+## Sensitivity analysis
+
+- A sensitivity analysis was also conducted as follows:
+  - We applied a two-year lag window following study entry,
+    reclassifying subjects flagged with any of the five CVD conditions
+    within that window from incident to prevalent and excluding them
+    from the at-risk population.
+  - To avoid immortal time bias introduced by this post-entry exclusion,
+    the time origin of the Cox model was shifted to two years after
+    study entry.
+- In this sensitivity analysis, the interaction between egg frequency
+  and meat intake remained statistically significant (p = 0.035).
+  - Estimated HRs for egg frequency at the same levels of meat intake
+    are shown below. The results were similar to those from the main
+    analysis.
+
+<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
+
+<thead>
+
+<tr>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="4">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Egg frequency
+
+</div>
+
+</th>
+
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+
+</th>
+
+</tr>
+
+<tr>
+
+<th style="text-align:left;">
+
+Meat intake (gram/day)
+</th>
+
+<th style="text-align:center;">
+
+None
+</th>
+
+<th style="text-align:center;">
+
+1-3 times/month
+</th>
+
+<th style="text-align:center;">
+
+1-4 times/week
+</th>
+
+<th style="text-align:center;">
+
+5+ times/week
+</th>
+
+<th style="text-align:center;">
+
+P-trend
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td style="text-align:left;">
+
+0
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+1.04 (0.98, 1.10)
+</td>
+
+<td style="text-align:center;">
+
+0.94 (0.89, 1.00)
+</td>
+
+<td style="text-align:center;">
+
+0.93 (0.84, 1.04)
+</td>
+
+<td style="text-align:center;">
+
+0.0112
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+10
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+1.00 (0.95, 1.05)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.87, 0.96)
+</td>
+
+<td style="text-align:center;">
+
+0.91 (0.83, 1.00)
+</td>
+
+<td style="text-align:center;">
+
+0.0012
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+30
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.92 (0.85, 0.99)
+</td>
+
+<td style="text-align:center;">
+
+0.85 (0.80, 0.92)
+</td>
+
+<td style="text-align:center;">
+
+0.86 (0.78, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.0005
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+100
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.68 (0.53, 0.87)
+</td>
+
+<td style="text-align:center;">
+
+0.68 (0.55, 0.84)
+</td>
+
+<td style="text-align:center;">
+
+0.72 (0.57, 0.91)
+</td>
+
+<td style="text-align:center;">
+
+0.0283
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+## Assumption checking
+
 ### Checking the linearity of dietary variables
 
 - To examine whether the associations between meat and other dietary
@@ -1240,5 +1466,10 @@ None
   Schoenfeld residuals against time for each covariate. The residuals
   scattered randomly around zero with no discernible trend over time,
   supporting the assumption
+
+<!-- -->
+
+    ## Warning in Surv(agein + 2, ageout, inc_CVD): Stop time must be > start time, NA
+    ## created
 
 ![](summary_files/figure-gfm/cox_ph_assumption_check-1.png)<!-- -->
