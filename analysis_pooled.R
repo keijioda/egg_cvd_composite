@@ -832,6 +832,26 @@ p_egg  <- plot_zph_gg(zph_result, "egg_freq4")
 library(patchwork)
 p_meat + p_egg
 
+# For each of egg_freq4 categorical variable
+zph_bylevel <- cox.zph(cox_imp1, terms = FALSE)
+egg_dummy_terms <- grep("^egg_freq4", colnames(zph_bylevel$y), value = TRUE)
+egg_dummy_terms <- egg_dummy_terms[1:3]
+
+# Check
+egg_dummy_terms
+
+# Produce zph plots
+egg_zph_plots <- lapply(egg_dummy_terms, function(term) {
+  plot_zph_gg(zph_bylevel, term, ylim = c(-30, 50))
+})
+
+# Combine them
+p_egg_zph_bylevel <- wrap_plots(egg_zph_plots, ncol = 1)
+
+pdf("./Results/egg_freq4_zph_by_level.pdf", width = 7, height = 12)
+print(p_egg_zph_bylevel)
+dev.off()
+
 # Checking the linearity on dietary variables -----------------------------
 
 library(rms)

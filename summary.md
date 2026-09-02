@@ -1468,3 +1468,35 @@ P-trend
   supporting the assumption
 
 ![](summary_files/figure-gfm/cox_ph_assumption_check-1.png)<!-- -->
+
+## Restricted cubic spline model for egg intake (gram/day)
+
+- Instead of modeling egg intake as a categorical frequency variable, we
+  modeled it as continuous (g/day), with all other covariates retained
+  in the model. Egg intake was energy-adjusted using the same approach
+  applied to the other dietary variables.
+
+- Because the association between egg intake and our outcome could be
+  non-linear, we modeled egg intake using restricted cubic spline terms
+  with 4 knots. An interaction term between the egg spline terms and
+  meat intake (modeled linearly) was also included. As noted above, meat
+  intake showed no evidence of a non-linear association with the
+  outcome, so only its linear term was retained in the model.
+
+- The omnibus test for the egg spline × meat interaction (df = 3) was
+  statistically significant (p = 0.0242). To characterize the shape of
+  this interaction, we plotted the pooled hazard ratio for egg intake
+  across a range of meat intake levels (0, 10, 30, and 50 g/day)
+
+  - At lower meat intake levels (0 or 10 g/day), the HR dips below 1 and
+    reaches its lowest value (~0.9) at approximately 20 g/day of egg
+    intake, before partially climbing back toward 1 at higher egg
+    intake.
+  - At higher meat intake levels (30 or 50 g/day), the HR drops further,
+    reaching approximately 0.80–0.85, and although it also rises again
+    at higher egg intake, it remains further below 1 and does not return
+    as close to the null value as it does at lower meat intake levels.
+  - The initial decline in HR appears to become steeper as meat intake
+    increases.
+
+![](summary_files/figure-gfm/egg_spline-1.png)<!-- -->
