@@ -557,6 +557,40 @@ P-trend (egg)
 
 <td style="text-align:left;">
 
+50
+</td>
+
+<td style="text-align:center;">
+
+1.29 (1.16, 1.42)
+</td>
+
+<td style="text-align:center;">
+
+1.09 (1.00, 1.18)
+</td>
+
+<td style="text-align:center;">
+
+1.03 (0.97, 1.09)
+</td>
+
+<td style="text-align:center;">
+
+1.06 (0.96, 1.16)
+</td>
+
+<td style="text-align:center;">
+
+0.0017
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
 100
 </td>
 
@@ -809,6 +843,40 @@ P-trend
 
 <td style="text-align:left;">
 
+50
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.84 (0.75, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.80 (0.72, 0.88)
+</td>
+
+<td style="text-align:center;">
+
+0.82 (0.73, 0.93)
+</td>
+
+<td style="text-align:center;">
+
+0.0017
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
 100
 </td>
 
@@ -1013,6 +1081,35 @@ None
 
 <td style="text-align:left;">
 
+50
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.84 (0.75, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.79 (0.72, 0.88)
+</td>
+
+<td style="text-align:center;">
+
+0.81 (0.72, 0.92)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
 100
 </td>
 
@@ -1180,6 +1277,35 @@ None
 <td style="text-align:center;">
 
 0.88 (0.80, 0.97)
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+50
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.84 (0.75, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.80 (0.72, 0.89)
+</td>
+
+<td style="text-align:center;">
+
+0.83 (0.74, 0.94)
 </td>
 
 </tr>
@@ -1395,6 +1521,40 @@ P-trend
 <td style="text-align:center;">
 
 0.0005
+</td>
+
+</tr>
+
+<tr>
+
+<td style="text-align:left;">
+
+50
+</td>
+
+<td style="text-align:center;">
+
+1.00 (Ref)
+</td>
+
+<td style="text-align:center;">
+
+0.84 (0.75, 0.95)
+</td>
+
+<td style="text-align:center;">
+
+0.80 (0.72, 0.89)
+</td>
+
+<td style="text-align:center;">
+
+0.82 (0.72, 0.93)
+</td>
+
+<td style="text-align:center;">
+
+0.0030
 </td>
 
 </tr>
