@@ -256,9 +256,9 @@ p_egg_by_meat <- ggplot(egg_dose_response_by_meat, aes(x = eggs_gram_ea, y = HR)
   facet_wrap(~ meat_label, nrow = 1) +
   labs(
     x = "Energy-adjusted egg intake (g/day)",
-    y = "Hazard ratio (log scale)",
-    title = "Egg intake dose-response by meat intake level",
-    subtitle = sprintf("Restricted cubic spline, 4 knots | Reference: %.0f g/day egg intake at the same meat level", ref_val)
+    y = "Hazard ratio (log scale)"
+    # title = "Egg intake dose-response by meat intake level",
+    # subtitle = sprintf("Restricted cubic spline, 4 knots | Reference: %.0f g/day egg intake at the same meat level", ref_val)
   ) +
   theme_minimal(base_size = 13) +
   theme(
@@ -269,7 +269,7 @@ p_egg_by_meat <- ggplot(egg_dose_response_by_meat, aes(x = eggs_gram_ea, y = HR)
 
 p_egg_by_meat
 
-pdf("./Results/egg_gram_rcs_dose_response_by_meat.pdf", width = 12, height = 4)
+pdf("./Results/egg_gram_rcs_dose_response_by_meat.pdf", width = 12, height = 3)
 print(p_egg_by_meat)
 dev.off()
 

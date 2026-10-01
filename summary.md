@@ -591,40 +591,6 @@ P-trend (egg)
 
 <td style="text-align:left;">
 
-100
-</td>
-
-<td style="text-align:center;">
-
-1.66 (1.36, 2.03)
-</td>
-
-<td style="text-align:center;">
-
-1.16 (0.99, 1.36)
-</td>
-
-<td style="text-align:center;">
-
-1.13 (1.02, 1.25)
-</td>
-
-<td style="text-align:center;">
-
-1.19 (1.03, 1.38)
-</td>
-
-<td style="text-align:center;">
-
-0.0205
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
 P-trend (meat)
 </td>
 
@@ -873,40 +839,6 @@ P-trend
 
 </tr>
 
-<tr>
-
-<td style="text-align:left;">
-
-100
-</td>
-
-<td style="text-align:center;">
-
-1.00 (Ref)
-</td>
-
-<td style="text-align:center;">
-
-0.70 (0.55, 0.89)
-</td>
-
-<td style="text-align:center;">
-
-0.68 (0.55, 0.83)
-</td>
-
-<td style="text-align:center;">
-
-0.72 (0.57, 0.90)
-</td>
-
-<td style="text-align:center;">
-
-0.0205
-</td>
-
-</tr>
-
 </tbody>
 
 </table>
@@ -1106,35 +1038,6 @@ None
 
 </tr>
 
-<tr>
-
-<td style="text-align:left;">
-
-100
-</td>
-
-<td style="text-align:center;">
-
-1.00 (Ref)
-</td>
-
-<td style="text-align:center;">
-
-0.70 (0.55, 0.89)
-</td>
-
-<td style="text-align:center;">
-
-0.68 (0.55, 0.83)
-</td>
-
-<td style="text-align:center;">
-
-0.71 (0.56, 0.89)
-</td>
-
-</tr>
-
 </tbody>
 
 </table>
@@ -1306,35 +1209,6 @@ None
 <td style="text-align:center;">
 
 0.83 (0.74, 0.94)
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-100
-</td>
-
-<td style="text-align:center;">
-
-1.00 (Ref)
-</td>
-
-<td style="text-align:center;">
-
-0.70 (0.55, 0.89)
-</td>
-
-<td style="text-align:center;">
-
-0.68 (0.56, 0.84)
-</td>
-
-<td style="text-align:center;">
-
-0.73 (0.58, 0.92)
 </td>
 
 </tr>
@@ -1555,40 +1429,6 @@ P-trend
 <td style="text-align:center;">
 
 0.0030
-</td>
-
-</tr>
-
-<tr>
-
-<td style="text-align:left;">
-
-100
-</td>
-
-<td style="text-align:center;">
-
-1.00 (Ref)
-</td>
-
-<td style="text-align:center;">
-
-0.68 (0.53, 0.87)
-</td>
-
-<td style="text-align:center;">
-
-0.68 (0.55, 0.84)
-</td>
-
-<td style="text-align:center;">
-
-0.72 (0.57, 0.91)
-</td>
-
-<td style="text-align:center;">
-
-0.0283
 </td>
 
 </tr>
