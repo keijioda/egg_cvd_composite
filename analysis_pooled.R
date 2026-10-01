@@ -251,7 +251,7 @@ egg_terms <- list(
 
 # Meat values in grams/day, as in the table -- converted to the model's
 # _100 scale (meat_gram_ea100 = meat_gram_ea / 100) inside the call
-meat_values_gramday <- c(0, 10, 30, 100)
+meat_values_gramday <- c(0, 10, 30, 50)
 
 hr_table <- expand_grid(
   egg_freq4    = names(egg_terms),
@@ -284,7 +284,7 @@ hr_table_wide <- hr_table %>%
 hr_table_wide
 
 # Forest plot
-meat_values_gramday <- c(0, 10, 30, 100)   # match what you used to build hr_table
+meat_values_gramday <- c(0, 10, 30, 50)   # match what you used to build hr_table
 
 plot_data <- hr_table %>%
   mutate(
@@ -321,7 +321,7 @@ p <- ggplot(plot_data, aes(x = HR, y = meat_label, color = sig_cat, shape = sig_
   geom_point(size = 3) +
   geom_text(aes(x = x_label_pos, label = label), color = "black", hjust = 0, size = 3.6) +
   facet_wrap(vars(egg_label), ncol = 1, scales = "free_y", strip.position = "top") +
-  scale_x_log10(breaks = c(0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
+  scale_x_log10(breaks = c(0.8, 1.0, 1.2, 1.4),
                 limits = c(0.75, x_max),
                 expand = expansion(mult = c(0.02, 0.02))) +
   scale_color_manual(values = c("HR > 1, significant" = "#D2691E",
@@ -457,12 +457,19 @@ get_wald_p_pooled(
   coef_wt    = c(1, 30 / 100)
 )
 
-# Trend for egg intake at meat intake = 100
+# Trend for egg intake at meat intake = 50
 get_wald_p_pooled(
   fit_mod4b_full,
   coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
-  coef_wt    = c(1, 100 / 100)
+  coef_wt    = c(1, 50 / 100)
 )
+
+# Trend for egg intake at meat intake = 100
+# get_wald_p_pooled(
+#   fit_mod4b_full,
+#   coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
+#   coef_wt    = c(1, 100 / 100)
+# )
 
 
 # Incorporate trend p into the table --------------------------------------
@@ -492,9 +499,9 @@ p_trend_egg <- c(
   "30"  = get_wald_p_pooled(fit_mod4b_full,
                             coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
                             coef_wt    = c(1, 30 / 100)),
-  "100" = get_wald_p_pooled(fit_mod4b_full,
+  "50" = get_wald_p_pooled(fit_mod4b_full,
                             coef_names = c("as.numeric(egg_freq4)", "meat_gram_ea100:as.numeric(egg_freq4)"),
-                            coef_wt    = c(1, 100 / 100))
+                            coef_wt    = c(1, 50 / 100))
 )
 
 # Helper to format p-values consistently
@@ -568,7 +575,7 @@ egg_hr_at_meat <- function(fit_list, meat_gramday) {
   )
 }
 
-meat_values_gramday <- c(0, 10, 30, 100)
+meat_values_gramday <- c(0, 10, 30, 50)
 egg_hr_table <- purrr::map_dfr(meat_values_gramday, ~ egg_hr_at_meat(fit_mod4a_full, .x))
 
 egg_hr_wide <- egg_hr_table %>%
@@ -597,10 +604,10 @@ egg_hr_wide %>%
 
 # Add "None" reference rows (HR = 1, no CI) for each meat level
 none_rows <- tibble(
-  Meat = paste0(c(0, 10, 30, 100), " g/d"),
+  Meat = paste0(c(0, 10, 30, 50), " g/d"),
   Egg  = "None",
   HR = 1, Lower = NA, Upper = NA,
-  meat_gramday = c(0, 10, 30, 100)
+  meat_gramday = c(0, 10, 30, 50)
 )
 
 egg_hr_plot_data <- egg_hr_table %>%
@@ -618,8 +625,8 @@ p2 <- ggplot(egg_hr_plot_data, aes(x = Egg, y = HR)) +
   scale_x_discrete(labels = c("None" = "None\n(Ref)", "1-3/mo" = "1-3/mo",
                               "1-4/wk" = "1-4/wk", "5+/wk" = "5+/wk")) +
   scale_y_log10(breaks = c(0.6, 0.7, 0.8, 0.9, 1, 1.5, 2)) +
-  facet_wrap(~ factor(meat_gramday, levels = c(0, 10, 30, 100),
-                      labels = paste0("Meat: ", c(0, 10, 30, 100), " g/d")),
+  facet_wrap(~ factor(meat_gramday, levels = c(0, 10, 30, 50),
+                      labels = paste0("Meat: ", c(0, 10, 30, 50), " g/d")),
              nrow = 1) +
   labs(x = "Egg intake frequency", y = "Hazard ratio (log scale)") +
   theme_minimal() +
@@ -677,7 +684,7 @@ get_est_beta_substitute <- function(bhat, vt, loc, weight) {
 }
 
 # Evaluate at a grid of meat levels
-meat_grid <- c(0, 10, 30, 100) / 100
+meat_grid <- c(0, 10, 30, 50) / 100
 
 # Names for egg terms and their interaction with meat
 egg_terms <- c("egg_freq41-3/mo", "egg_freq41-4/wk", "egg_freq45+/wk")
@@ -857,7 +864,7 @@ dev.off()
 library(rms)
 library(Hmisc)
 
-# --- Step 1: Fix knot locations across all imputed datasets --------------
+# Fix knot locations across all imputed datasets
 vars_rcs <- c("meat_gram_ea", "fish_gram_ea", "alldairy2_gram_ea",
               "totalveg_gram_ea", "fruits_gram_ea", "refgrains_gram_ea",
               "whole_mixed_grains_gram_ea", "nutsseeds_gram_ea", "legumes_gram_ea")
@@ -869,7 +876,7 @@ knot_list <- lapply(vars_rcs, function(v) {
 })
 names(knot_list) <- vars_rcs
 
-# --- Step 2: Fit cph with FIXED knots on each imputed dataset ------------
+# Fit cph with fixed knots on each imputed dataset
 # Build the rcs terms programmatically with explicit knot locations
 rcs_terms <- sapply(vars_rcs, function(v) {
   k <- paste(round(knot_list[[v]], 4), collapse = ",")
@@ -883,18 +890,19 @@ mod3_rcs_fm <- as.formula(paste(
   "bmicat + exercise + sleephrs2 + smokecat6 + alccat + kcal100 +", rcs_formula_rhs
 ))
 
+dd <- datadist(stacked_data)
+options(datadist = "dd")
+
 fit_mod3_rcs_list <- lapply(imputed_data_list, function(d) {
-  dd <- datadist(d)
-  options(datadist = "dd")
   cph(mod3_rcs_fm, data = d, method = "efron", x = TRUE, y = TRUE)
 })
 
-# --- Step 3: Pool coefficients + covariance via Rubin's rules -------------
+# Pool coefficients + covariance via Rubin's rules
 pooled_rcs <- pool_coef_vcov(fit_mod3_rcs_list)
 qbar <- pooled_rcs$qbar
 V    <- pooled_rcs$vcov
 
-# --- Step 4: Multi-df Wald chi-square test for nonlinearity --------------
+# Multi-df Wald chi-square test for nonlinearity
 wald_chisq_pooled <- function(qbar, V, coef_names) {
   L <- matrix(0, nrow = length(coef_names), ncol = length(qbar),
               dimnames = list(coef_names, names(qbar)))
@@ -908,14 +916,11 @@ wald_chisq_pooled <- function(qbar, V, coef_names) {
   c(chisq = chisq, df = df, p_nonlinear = p)
 }
 
-# Nonlinear terms for a given rcs variable are all basis columns EXCEPT the
-# first (linear) one -- with 4 knots, rcs() produces 3 basis columns total:
-# 1 linear + 2 nonlinear. Term names follow the pattern "var", "var'", "var''"
 nonlinear_terms <- function(varname, all_names) {
   grep(paste0("^", varname, "'"), all_names, value = TRUE)
 }
 
-# --- Step 5: Run nonlinearity test for each rcs variable ------------------
+# Run nonlinearity test for each rcs variable
 nonlin_results <- lapply(vars_rcs, function(v) {
   nl_terms <- nonlinear_terms(v, names(qbar))
   res <- wald_chisq_pooled(qbar, V, nl_terms)
